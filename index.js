@@ -1259,7 +1259,13 @@ case 'rw': {
         }, 3 * 60 * 1000);
         
     } catch (err) {
-        enviar("❌ Error conectando con la base de personajes.");
+        if (err.response && err.response.data && err.response.data.errors) {
+            let errorMsg = err.response.data.errors[0].message;
+            enviar(`❌ Error de la API de personajes: ${errorMsg}`);
+        } else {
+            enviar("❌ Error conectando con la base de personajes.");
+        }
+        console.error("Error Gacha:", err.message || err);
     }
 }
 break;
