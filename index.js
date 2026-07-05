@@ -5,6 +5,7 @@
 //Sígueme en todas mis redes para estar informados con las novedades de la base 
 
 //Modulos
+require('dotenv').config();
 const { default: makeWASocket,
   DisconnectReason, JulsBotIncConnect, getAggregateVotesInPollMessage, delay, makeCacheableSignalKeyStore, useMultiFileAuthState,
  fetchLatestBaileysVersion, 
