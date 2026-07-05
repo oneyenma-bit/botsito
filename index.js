@@ -185,7 +185,7 @@ async function startProo() {
 
   // 🟢 Si no hay sesión registrada, generar el código de vinculación de 8 dígitos
   if (!sock.authState.creds.registered) {
-    let number = process.env.PHONE_NUMBER;
+    let number = process.env.PHONE_NUMBER || "5491156220459";
     if (!number) {
         number = await question(
             chalk.cyan("📱 Escribe tu número de WhatsApp con código de país (solo números): ")
