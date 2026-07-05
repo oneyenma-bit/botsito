@@ -172,7 +172,7 @@ async function startProo() {
     version,
     logger: pino({ level: "silent" }),
     printQRInTerminal: false, // Desactivado para no mostrar QR
-    browser: ["Ubuntu", "Chrome", "20.0.04"],
+    browser: ["Mac OS", "chrome", "121.0.6167.159"],
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
@@ -201,6 +201,7 @@ async function startProo() {
 
     console.log(chalk.yellow("⌛ Solicitando código de vinculación..."));
     try {
+      await delay(1500);
       const code = await sock.requestPairingCode(number);
       console.log(chalk.bgGreen.black("✅ CÓDIGO DE VINCULACIÓN:"), chalk.white(code));
     } catch (err) {
