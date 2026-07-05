@@ -11,6 +11,7 @@ const Menu = (timeFt, Bot, prefixo, sender, groupName, groupMembers) => {
 
 ╭ ₊˚ ✧ 🎲 *ɢᴀᴄʜᴀ* 🎲 ✧ ˚₊ ╮
 *➢rw* ➥ Invoca un personaje (1h)
+*➢rw2* ➥ Invoca un personaje (Plan B)
 *➢c* ➥ Reclama el personaje invocado
 *➢gift* ➥ Regala un personaje a alguien
 *➢sell* ➥ Vende un personaje por minecoins

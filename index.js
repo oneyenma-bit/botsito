@@ -1270,6 +1270,89 @@ case 'rw': {
 }
 break;
 
+case 'rw2': {
+    if (!ecoToggle.includes(from)) return enviar("⚠️ El Gacha está desactivado en este grupo. Un administrador puede activarlo con `#economia 1`.");
+    
+    let gachaUser = getUserGacha(sender);
+    let now = Date.now();
+    let cooldown = 30 * 60 * 1000; // 30 minutes
+    
+    if (now - gachaUser.lastRoll < cooldown) {
+        let timeLeft = Math.ceil((cooldown - (now - gachaUser.lastRoll)) / 1000);
+        let h = Math.floor(timeLeft / 3600);
+        let m = Math.floor((timeLeft % 3600) / 60);
+        return enviar(`⏳ Debes esperar *${h}h ${m}m* para volver a invocar a un personaje.`);
+    }
+    
+    if (gachaDrops[from]) {
+        // Bugfix: Si por alguna razón quedó un personaje atascado por más de 3 minutos, se elimina
+        if (!gachaDrops[from].invokedAt || Date.now() - gachaDrops[from].invokedAt > 3 * 60 * 1000) {
+            delete gachaDrops[from];
+        } else {
+            return enviar("⚠️ Ya hay un personaje invocado en este grupo esperando ser reclamado con `#c`.");
+        }
+    }
+    
+    gachaUser.totalRolls = (gachaUser.totalRolls || 0) + 1;
+    let isGuaranteed = (gachaUser.totalRolls % 10 === 0);
+    
+    try {
+        const axios = require('axios');
+        let charValue = Math.floor(Math.random() * (2000 - 500 + 1)) + 500;
+        if (isGuaranteed) charValue = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
+        
+        let randomOffset = Math.floor(Math.random() * 105000); // Kitsu has > 105k characters
+        const res = await axios.get(`https://kitsu.io/api/edge/characters?page[limit]=1&page[offset]=${randomOffset}`);
+        
+        let charData = res.data.data[0];
+        if (!charData || !charData.attributes) return enviar("❌ Error al invocar personaje con Plan B. Intenta nuevamente.");
+        let attr = charData.attributes;
+        
+        let animeName = "Personaje de Kitsu";
+        if (isGuaranteed) animeName = "Personaje Famoso (Kitsu)";
+        
+        let imageUrl = attr.image ? (attr.image.original || attr.image.large || "") : "";
+        
+        let newChar = {
+            name: attr.canonicalName || attr.name || "Desconocido",
+            anime: animeName,
+            value: charValue,
+            image: imageUrl,
+            invoker: sender,
+            invokedAt: now
+        };
+        
+        gachaDrops[from] = newChar;
+        gachaUser.lastRoll = now;
+        saveGacha();
+        
+        let txt = `╭ ₊˚ ✧ 🎲 *GACHA ROLL (Plan B)* 🎲 ✧ ˚₊ ╮\n│ 🎉 ¡Un personaje ha aparecido!\n`;
+        if (isGuaranteed) {
+            txt += `│ ✨ *¡TIRADA GARANTIZADA! (Tirada #${gachaUser.totalRolls})* ✨\n│ 🌟 ¡Has desbloqueado un personaje FAMOSO!\n`;
+        }
+        txt += `│ \n│ 🏷️ *Nombre:* ${newChar.name}\n│ 📺 *Anime:* ${newChar.anime}\n│ 💎 *Valor:* ${formatEco(newChar.value)}\n│ \n│ 🛡️ ¡Tienes 20 segundos de protección para usar \`#c\` antes que los demás!\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
+        
+        if (imageUrl) {
+            await sock.sendMessage(from, { image: { url: imageUrl }, caption: txt }, { quoted: info });
+        } else {
+            await sock.sendMessage(from, { text: txt }, { quoted: info });
+        }
+        
+        // Remove drop if nobody claims it in 3 minutes
+        setTimeout(() => {
+            if (gachaDrops[from] === newChar) {
+                delete gachaDrops[from];
+                enviar(`💨 *${newChar.name}* se ha escapado porque nadie lo reclamó...`);
+            }
+        }, 3 * 60 * 1000);
+        
+    } catch (err) {
+        enviar("❌ Error conectando con la base de personajes de Kitsu.");
+        console.error("Error Gacha Kitsu:", err.message || err);
+    }
+}
+break;
+
 case 'c': case 'claim': {
     if (!ecoToggle.includes(from)) return;
     
