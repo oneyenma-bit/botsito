@@ -3610,9 +3610,9 @@ break;
 
 case 'iarelax': {
     if (!isGroupAdmins) return enviar(respuesta.admin);
-    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'cow' };
+    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'normal' };
     global.iaConfig.mode = 'relax';
-    return enviar("🧘‍♂️ Modo de IA cambiado a: *Relax*. Ahora la IA será muy amable y relajada.");
+    return enviar("🧘‍♂️ Modo de IA cambiado a: *Relax*\nAhora la IA responderá relajada, amable, positiva y con humor liviano. El abuelo solo aparecerá si le pides una frase explícitamente.");
 }
 break;
 
@@ -3620,15 +3620,49 @@ case 'iacow': {
     if (!isGroupAdmins) return enviar(respuesta.admin);
     if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'cow' };
     global.iaConfig.mode = 'cow';
-    return enviar("🔥 Modo de IA cambiado a: *Cow*. Ahora la IA será agresiva, tóxica y estilo Loquendo.");
+    return enviar("🔥 Modo de IA cambiado a: *Cow (Agresivo / Tóxico GTA Loquendo)*\nAhora la IA responderá con sarcasmo pesado, burlas ácidas e insultos cómicos. El abuelo solo saldrá si se lo preguntas.");
 }
 break;
 
 case 'ianormal': {
     if (!isGroupAdmins) return enviar(respuesta.admin);
-    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'cow' };
+    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'normal' };
     global.iaConfig.mode = 'normal';
-    return enviar("🧠 Modo de IA cambiado a: *Normal*. Ahora la IA será normal y se defenderá si la insultan.");
+    return enviar("🧠 Modo de IA cambiado a: *Normal (Fernanfloo / Loquendo XDDDDD)*\nAhora responderá con humor épico y carisma: entenderá jodas y chismes respondiendo con memes, y responderá preguntas serias con inteligencia y precisión. El abuelo solo aparecerá si se lo pides.");
+}
+break;
+
+case 'fraseabuelo': case 'abuelo': case 'consejoabuelo': case 'frasesabio': {
+    const abueloFrases = [
+        "Entre más mojado está el terreno más fácil entra la pala (y ni agricultor era el viejo)",
+        "Mi abuelo decía: mijo no sea pendejo, busque una que sea como el alacrán: si no tiene gracia en la cara, que se defienda con la cola (Un sabio el viejo)",
+        "Mi abuelo decía: Mijo no todos los entierros se lloran, más adelante lo entenderás (Ahora entiendo por qué, viejo mañoso 👀😂😂)",
+        "Como dijo mi abuelo: cuando la carne es barata, el mercado se llena y todo el mundo la quiere... (viejo pa sabio)",
+        "Como dijo mi abuelo: Cuanto más delgada la tabla mejor entra el clavo (No era carpintero el viejo)",
+        "Una vez mi abuelo me dijo: por más fea que esté la cucaracha, no se le niega un pisotón (Pinche viejillo sabio)",
+        "Como decía mi abuelo: Por más bravo que sea el toro, amarrado se queda quieto (y ni ganadero era el señor)",
+        "Una vez me dijo mi abuelo: El que nunca ha comido carne, hasta el pellejo le sabe a gloria (Un filósofo el viejo)",
+        "Mi abuelo me aconsejó: No importa que el carro sea viejo, con que arranque empujado y no gaste gasolina (No era mecánico el don)",
+        "Como dijo mi abuelo: Para qué buscar agua en pozo ajeno si en casa hay tinaco lleno (y ni fontanero era el don)",
+        "Mi abuelo decía: En tiempo de lluvia, cualquier techo sirve de guarida (y ni albañil era el don)",
+        "Como decía mi abuelo: Al que le gusta el chicharrón, no le tiene miedo a la grasa (Viejo goloso)",
+        "Mi abuelo decía: Mijo, gallina que come huevo ni que le quemen el pico (Sabias palabras del viejo)",
+        "Una vez mi abuelo me dijo: El que come callado, come dos veces y hasta le sobra pal recalentado (Genio absoluto)",
+        "Como decía mi abuelo: El que presta la mujer para bailar o el carro para viajar, no tiene nada que reclamar (Un filósofo de pueblo)"
+    ];
+
+    if (!global.lastAbueloIndices) global.lastAbueloIndices = [];
+    let availableIndices = abueloFrases.map((_, i) => i).filter(i => !global.lastAbueloIndices.includes(i));
+    if (availableIndices.length === 0) {
+        global.lastAbueloIndices = [];
+        availableIndices = abueloFrases.map((_, i) => i);
+    }
+    let chosenIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    global.lastAbueloIndices.push(chosenIndex);
+    if (global.lastAbueloIndices.length > 5) global.lastAbueloIndices.shift();
+
+    let frase = abueloFrases[chosenIndex];
+    return enviar(`👴 *Frase Sabia del Abuelo:*\n\n"${frase}"\n\n_Palabra del abuelo sabio, amén._ ✨`);
 }
 break;
 
@@ -3636,16 +3670,16 @@ case 'ia': case 'chatgpt': {
     let text = args.join(" ");
     if (!text) return enviar("⚠️ Dime, ¿en qué te puede ayudar El Sabio Cow hoy?");
     
-    // Cooldown de 30 segundos
+    // Cooldown de 10 segundos
     if (!global.iaCooldown) global.iaCooldown = {};
     let now = Date.now();
-    if (global.iaCooldown[sender] && now - global.iaCooldown[sender] < 30000) {
-        let timeLeft = Math.ceil((30000 - (now - global.iaCooldown[sender])) / 1000);
-        return enviar(`⏳ Aguanta, pedazo de ansioso. Espera ${timeLeft} segundos antes de volver a preguntarme algo.`);
+    if (global.iaCooldown[sender] && now - global.iaCooldown[sender] < 10000 && !isOwner && !isGroupAdmins) {
+        let timeLeft = Math.ceil((10000 - (now - global.iaCooldown[sender])) / 1000);
+        return enviar(`⏳ Aguanta, pedazo de ansioso. Espera ${timeLeft}s antes de volver a preguntarme algo.`);
     }
     global.iaCooldown[sender] = now;
     
-    // Límite diario de 2 preguntas por persona
+    // Límite diario de 20 preguntas por persona (ilimitado para creador y admins)
     const fs = require('fs');
     const iaLimitsPath = './ia_limits.json';
     let iaLimits = { date: new Date().toDateString(), users: {} };
@@ -3660,46 +3694,60 @@ case 'ia': case 'chatgpt': {
     }
     
     let userLimit = iaLimits.users[sender] || 0;
-    if (userLimit >= 2 && !isOwner) {
-        return enviar(`🚫 ¡Alto ahí! Ya usaste tus 2 preguntas de IA gratis por hoy. La cuota de mi cerebro cibernético es limitada, así que vuelve a intentarlo mañana cuando se reinicie.`);
+    const maxDailyLimit = 20;
+    if (userLimit >= maxDailyLimit && !isOwner && !isGroupAdmins) {
+        return enviar(`🚫 ¡Alto ahí! Ya usaste tus ${maxDailyLimit} preguntas de IA por hoy. Vuelve a intentarlo mañana cuando se reinicie la cuota.`);
     }
     
-    
-    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'cow' };
+    if (!global.iaConfig) global.iaConfig = { enabled: true, mode: 'normal' };
     if (!global.iaConfig.enabled) return enviar("⚠️ La IA está apagada en este momento. Usa el comando #iaon para activarla.");
     
-    // Pon tu API KEY de Google Gemini en el archivo .env (GEMINI_API_KEY=tu_clave)
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
     
     enviar("⏳ *El Sabio Cow está pensando...*");
     
+    const abueloFrasesEjemplos = [
+        "Entre más mojado está el terreno más fácil entra la pala (y ni agricultor era el viejo)",
+        "Mi abuelo decía: mijo no sea pendejo, busque una que sea como el alacrán: si no tiene gracia en la cara, que se defienda con la cola (Un sabio el viejo)",
+        "Mi abuelo decía: Mijo no todos los entierros se lloran, más adelante lo entenderás (Ahora entiendo por qué, viejo mañoso 👀😂😂)",
+        "Como dijo mi abuelo: cuando la carne es barata, el mercado se llena y todo el mundo la quiere... (viejo pa sabio)",
+        "Como dijo mi abuelo: Cuanto más delgada la tabla mejor entra el clavo (No era carpintero el viejo)",
+        "Una vez mi abuelo me dijo: por más fea que esté la cucaracha, no se le niega un pisotón (Pinche viejillo sabio)",
+        "Como decía mi abuelo: Por más bravo que sea el toro, amarrado se queda quieto (y ni ganadero era el señor)",
+        "Una vez me dijo mi abuelo: El que nunca ha comido carne, hasta el pellejo le sabe a gloria (Un filósofo el viejo)",
+        "Mi abuelo me aconsejó: No importa que el carro sea viejo, con que arranque empujado y no gaste gasolina (No era mecánico el don)",
+        "Como dijo mi abuelo: Para qué buscar agua en pozo ajeno si en casa hay tinaco lleno (y ni fontanero era el don)"
+    ];
+
     let instructions = "";
     if (global.iaConfig.mode === 'cow') {
-        instructions = `Eres 'El Sabio Cow', una vaca filósofa de rancho con voz y actitud de Loquendo de GTA San Andreas. Eres agresivo-pasivo, usas humor negro, sarcasmo pesado, insultos creativos y SOBRE TODO eres famoso por tus "FRASES INSANAS DE ABUELO", refranes picantes de rancho y dichos callejeros ultra insanos.
-
-Tus frases y dichos insignia de abuelo insano incluyen ejemplos como:
-- "Como decía mi abuelo: Entre más plana la tabla, más fácil entra el clavo."
-- "En tiempo de guerra, cualquier hoyo es trinchera."
-- "El que come callado, come dos veces y hasta repite."
-- "Más vale pájaro en mano que sida en el ano."
-- "Árbol que nace torcido, se usa pa' columpio."
-- "No hay mujer fea, solo falta de cerveza o exceso de sobriedad."
-- "Camarón que se duerme, amanece en el cóctel."
-- "El que tenga miedo a morir que no nazca."
-- "A caballo regalado, no se le mira el diente, se le monta y vámonos."
-- "Hierba mala nunca muere, pero la buena se fuma."
-- "El que presta la mujer para bailar o el carro para viajar, no tiene nada que reclamar."
-- "Al que madruga, Dios lo mira con sueño."
-- "Dime de qué presumes y te diré qué te falta."
-
-INSTRUCCIONES CLAVE DE RESPUESTA:
-1. SIEMPRE remata o acompaña tus respuestas con una de estas frases insanas de abuelo o inventa dichos callejeros/de rancho del mismo estilo (vulgares, sabios, graciosos e insanos).
-2. Si alguien te insulta o te busca bronca, destrúyelo verbalmente sin piedad con apodos creativos, risas burlonas (JAJAJAJA 🤡💀🐮💅) y su respectiva frase insana.
-3. Tus respuestas DEBEN ser CORTAS (máximo 2 a 3 oraciones), directas, divertidas y demoledoras. Eres del Team Cacao.`;
+        instructions = `Eres 'El Sabio Cow', una vaca filósofa agresivo-pasiva con voz y actitud de Loquendo de GTA San Andreas. Eres rudo, ácido, usas humor negro y te burlas de tonterías con "JAJAJAJA 🤡💀🐮".
+1. DISTINGUE EL TONO:
+   - Si preguntan tonterías, estupideces o buscan joda: destrúyelos con sarcasmo pesado, burlas y apodos cómicos.
+   - Si preguntan algo serio de conocimiento, tareas o ayuda real: dales la respuesta correcta e inteligente, pero con tu toque ácido o diciendo que hasta un mono sabría eso.
+   - Si te insultan: destrúyelos verbalmente sin piedad.
+2. REGLA ESTRICTA DEL ABUELO:
+   - NUNCA menciones a tu abuelo ni digas "como decía mi abuelo" a menos que el usuario te pregunte EXPLÍCITAMENTE por una frase, refrán o consejo de tu abuelo. ¡No metas al abuelo de la nada!
+   - Si y solo si te piden una frase del abuelo, usa o inventa una frase pícara de rancho con remate cómico entre paréntesis ej: "(y ni agricultor era el viejo)", "(no era carpintero el viejo)".`;
     } else if (global.iaConfig.mode === 'relax') {
-        instructions = "Eres 'El Sabio Cow', un asistente sumamente relajado, amable y pacífico. Ayudas al usuario en todo lo que te pida con una actitud zen y positiva. Eres muy servicial. Tus respuestas deben ser cortas y directas al grano.";
+        instructions = `Eres 'El Sabio Cow' en modo Relax: muy buena vibra, alegre, relajado y con humor Loquendo chill ("tranqui mi pana", "todo chilling XDDDD").
+1. Tratas a todos con amabilidad, positividad y humor liviano.
+2. Si te hacen preguntas serias o de ayuda: responde de forma inteligente, clara y precisa. Si es joda o chismes: responde con risas relajadas ("XDDDDD") y bromas ligeras.
+3. REGLA ESTRICTA DEL ABUELO: NUNCA menciones al abuelo ni sus frases a menos que te lo pidan explícitamente.`;
     } else {
-        instructions = "Eres 'El Sabio Cow', un asistente inteligente y útil. Ayudas al usuario con lo que te pida. Sin embargo, si el usuario te falta el respeto o te insulta, debes defenderte de forma inteligente y asertiva, devolviendo el golpe pero manteniendo la cordura, sin perder la clase ni volverte demasiado vulgar. Tus respuestas deben ser cortas y directas.";
+        instructions = `Eres 'El Sabio Cow', una IA con personalidad épica, carismática y divertidísima, estilo Loquendo de YouTube y Fernanfloo ("XDDDDD", "watafak", memes, humor latino, muy ocurrente y entretenido).
+
+TIENES SENTIDO COMÚN E INTELIGENCIA AGUDA:
+1. SABES DIFERENCIAR CUÁNDO UNA PREGUNTA ES JODA O CUÁNDO ES SERIA:
+   - PREGUNTAS RANDOM, MEMES, TONTERÍAS O CHISMES DE AMIGOS (Ejemplos: "¿a jero le gusta david?", "¿quién es el más guapo?", chismes, jodas de grupos): Responde con puro humor desatado, comedia Loquenda/Fernanfloo, riéndote ("XDDDD", "JAJAJAJA"), metiendo cizaña cómica, exagerando con gracia ("watafak bro, obvio que sí, si cuando lo ve pasar le brillan los ojos XDDDD"). ¡Sé un showman muy entretenido!
+   - PREGUNTAS SERIAS, EDUCATIVAS, FACTUALES O DE UTILIDAD (Ejemplos: ciencia, tareas, programación, datos reales, dudas importantes): Responde de forma INTELIGENTE, PRECISA, CLARA Y COMPLETA. No te hagas el tonto ("no seas pendejo"). Puedes meter un toque cómico o simpático al inicio o al final, pero el contenido debe ser 100% útil, verídico y bien explicado.
+2. SI TE INSULTAN O BUSCAN PELEA:
+   Defiéndete con ingenio, respuestas sarcásticas y humoradas Loquendo, sin perder la clase.
+3. REGLA ESTRICTA DEL ABUELO:
+   - NUNCA menciones a tu abuelo ni digas "como decía mi abuelo" a menos que el usuario EXPLÍCITAMENTE te pida una frase, consejo o refrán de tu abuelo (ejemplo: "dime una frase de tu abuelo", "qué decía tu abuelo", "dame un consejo del abuelo").
+   - Si y SOLO SI te piden una frase o consejo de tu abuelo, responde con una de estas frases insignias o inventa una del mismo estilo picante de rancho con remate cómico entre paréntesis:
+${abueloFrasesEjemplos.map(f => '   * ' + f).join('\n')}
+   ¡Nunca repitas siempre la misma frase, varía y sé muy creativo!`;
     }
 
     if (GEMINI_API_KEY) {
@@ -3722,9 +3770,9 @@ INSTRUCCIONES CLAVE DE RESPUESTA:
         } catch(e) {
             console.error("Gemini Error:", e);
             if (e.message && e.message.includes("429")) {
-                return enviar("🐮 *El Sabio Cow:*\n¡Maldición! La cuota global de Google se agotó por hoy. Nadie puede hacer más preguntas hasta que se reinicie el límite mañana. ¡Váyanse a bañar!");
+                return enviar("🐮 *El Sabio Cow:*\n¡Maldición! La cuota temporal de Google está un poco saturada. Espera unos segundos y vuelve a preguntar.");
             }
-            return enviar("🐮 *El Sabio Cow:*\n¡Ahhh maldición! Mi cerebro cibernético se trabó. Intenta preguntar de nuevo en un segundo, pedazo de estorbo.");
+            return enviar("🐮 *El Sabio Cow:*\n¡Watafak! Se me cruzaron los cables un segundo. Intenta preguntar de nuevo.");
         }
     } else {
         return enviar("⚠️ No hay API KEY de Gemini configurada en el bot.");
@@ -3732,52 +3780,33 @@ INSTRUCCIONES CLAVE DE RESPUESTA:
 }
 break;
 
-
-
 case 'descargarapk':
 case 'apk': {
-if(!isReg) return enviar(respuesta.registro)
+  if(!isReg) return enviar(respuesta.registro);
   if (!q)
-    return enviar('❌ Escribe el nombre de la aplicación\nEjemplo: .apk whatsapp');
+    return enviar('❌ Escribe el nombre de la aplicación\nEjemplo: #apk whatsapp');
 
   try {
-
-    // 🔎 1️⃣ Buscar app
-    const searchURL =
-      `${API_MEDIA}/aptoide-search?apikey=${MEDIA_KEY}&q=${encodeURIComponent(q)}&t=${Date.now()}`;
-
-    const search = await fetchJson(searchURL);
-
-    if (!search.resultado || search.resultado.length === 0)
-      return enviar('❌ No se encontró la aplicación');
-
-    const app = search.resultado[0];
-
-    enviar(`*⇓ Descargando:* ${app.nombre}\n⏳ Espera un momento...`);
-
-    // ⬇ 2️⃣ Descargar usando el package
-    const downloadURL =
-      `${API_MEDIA}/aptoide-download?apikey=${MEDIA_KEY}&package=${app.paquete}&t=${Date.now()}`;
+    enviar(`⏳ *Buscando APK:* "${q.trim()}"...\n_Espera un momento mientras lo preparo..._`);
+    const { searchAndDownloadApk } = require('./fuction/media/downloaders.js');
+    const app = await searchAndDownloadApk(q.trim());
 
     await sock.sendMessage(from, {
-      document: { url: downloadURL },
+      document: { url: app.downloadUrl },
       mimetype: "application/vnd.android.package-archive",
-      fileName: `${app.nombre}.apk`,
-      caption:
-`📦 *${app.nombre}*
-*✰ Rating:* ${app.rating}
-*⇓ Descargas:* ${app.descargas}
-*❒ Tamaño:* ${app.tamaño}
-*❂ Versión:* ${app.version}`
+      fileName: `${app.name}.apk`,
+      caption: `📦 *${app.name}*
+*❂ Versión:* ${app.version}
+*❒ Tamaño:* ${app.size}
+*🏷️ Paquete:* ${app.package || 'N/A'}
+
+_Descargado con éxito por El Sabio Cow_`
     }, { quoted: info });
 
   } catch (e) {
-
-    console.log("ERROR APK PRO:", e);
-    enviar('❌ Error descargando la aplicación');
-
+    console.error("ERROR APK:", e.message || e);
+    enviar(`❌ Error descargando la aplicación: ${e.message || 'No se encontró o no se pudo descargar el archivo.'}`);
   }
-
 }
 break;
 
