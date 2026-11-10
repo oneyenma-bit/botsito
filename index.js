@@ -2388,123 +2388,133 @@ Usa:
 break
 
 
-// STICKERS 
+// ==================== STICKERS & MULTIMEDIA ====================
 case 's':
-case 'sticker':
-  if(!isReg) return enviar(respuesta.registro)
-  if(coins < 1) return enviar(respuesta.coins)
-var RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage
-var boij2 = RSM?.imageMessage || info.message?.imageMessage || RSM?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessageV2?.message?.imageMessage || info.message?.viewOnceMessage?.message?.imageMessage || RSM?.viewOnceMessage?.message?.imageMessage
-var boij = RSM?.videoMessage || info.message?.videoMessage || RSM?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessageV2?.message?.videoMessage || info.message?.viewOnceMessage?.message?.videoMessage || RSM?.viewOnceMessage?.message?.videoMessage
-if(boij2){
-enviar(`Creando tu sticker supere un poco ❤️`)
-var pack = `
-👑 Dueño 👑
- ✅Cow
-⭐𝐂𝐫𝐞𝐚𝐝𝐨 𝐩𝐨𝐫 :
- ${pushname} `
-var author2 = ` 
-🤖 𝐁𝐨𝐭 🤖
- ⃟CowBot
-💐 𝐆𝐫𝐮𝐩𝐨💐
-${groupName} `
-owgi = await getFileBuffer(boij2, 'image')
-let encmediaa = await sendImageAsSticker2(sock, from, owgi, info, { packname:pack, author:author2})
-await DLT_FL(encmediaa)
-await addXp(sender,1)
-await delkoin(sender,1)
-} else if(boij && boij.seconds < 11){
-enviar(`Creando tu Sticker ${pushname}`)
-var pack = `
-👑 Dueño 👑
- ✅Cow
-⭐𝐂𝐫𝐞𝐚𝐝𝐨 𝐩𝐨𝐫 :
- ${pushname} `
-var author2 = ` 
-🤖 𝐁𝐨𝐭 🤖
- ⃟CowBot
-💐 𝐆𝐫𝐮𝐩𝐨💐
-${groupName} `
-owgi = await getFileBuffer(boij, 'video')
-let encmedia = await sendVideoAsSticker2(sock, from, owgi, info, { packname:pack, author:author2})
-await DLT_FL(encmedia)
-await addXp(sender,1)
-await delkoin(sender,1)
-} else {
-return enviar(`Marque una imagen o \nUn vídeo máximo de 10 segundos ⏲️`)
-}
-break
+case 'sticker': {
+    if (!isReg) return enviar(respuesta.registro);
+    const { imageToSticker, videoToSticker } = require('./fuction/media/stickers.js');
 
-///Nesecitas clave API//
-case "attp":
-case "attp2":
-case "attp3":
-if(!isReg) return enviar(respuesta.registro)
-if (!q) return enviar("Coloca un texto o emoji después del comando")
+    const RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const isQuotedImg = RSM?.imageMessage || RSM?.viewOnceMessageV2?.message?.imageMessage || RSM?.viewOnceMessage?.message?.imageMessage;
+    const isQuotedVid = RSM?.videoMessage || RSM?.viewOnceMessageV2?.message?.videoMessage || RSM?.viewOnceMessage?.message?.videoMessage;
+    const isDirectImg = info.message?.imageMessage || info.message?.viewOnceMessageV2?.message?.imageMessage;
+    const isDirectVid = info.message?.videoMessage || info.message?.viewOnceMessageV2?.message?.videoMessage;
 
-try {
+    let targetMedia = isQuotedImg || isDirectImg;
+    let isVideoMedia = false;
 
-let url = `${API_MEDIA}/api/${messagesC}?text=${encodeURIComponent(q)}&apikey=${MEDIA_KEY}`
+    if (!targetMedia) {
+        targetMedia = isQuotedVid || isDirectVid;
+        if (targetMedia) isVideoMedia = true;
+    }
 
-let res = await fetch(url)
-let buffer = await res.buffer()
+    if (!targetMedia) {
+        return enviar("📸 *Responde a una imagen o video corto (< 10s) con #s para convertirlo en sticker.*");
+    }
 
-await sock.sendMessage(from, {
-sticker: buffer
-}, { quoted: info })
+    enviar("⏳ *Creando sticker...*");
 
-} catch (e) {
-console.log(e)
-enviar("Error al crear sticker")
+    try {
+        let pack = "Thecowbots";
+        let author = pushname || "CowBot";
+        if (text && text.includes('|')) {
+            const parts = text.split('|');
+            pack = parts[0].trim();
+            author = parts[1].trim();
+        } else if (text) {
+            pack = text.trim();
+        }
+
+        const mediaType = isVideoMedia ? 'video' : 'image';
+        const mediaBuffer = await getFileBuffer(targetMedia, mediaType);
+
+        const stickerBuffer = isVideoMedia 
+            ? await videoToSticker(mediaBuffer, pack, author)
+            : await imageToSticker(mediaBuffer, pack, author);
+
+        await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: info });
+        await addXp(sender, 1);
+    } catch (e) {
+        console.error("Error creando sticker:", e.message);
+        enviar("❌ *Error creando sticker:* " + e.message);
+    }
+    break;
 }
 
-break
+case 'wm':
+case 'take': {
+    if (!isReg) return enviar(respuesta.registro);
+    const RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const stickerMsg = RSM?.stickerMessage;
+    if (!stickerMsg) {
+        return enviar("🏷️ *Responde a un sticker con #wm [Nombre del pack | Autor]* para cambiarle los créditos.");
+    }
 
+    try {
+        enviar("⏳ *Cambiando créditos al sticker...*");
+        const { addExif } = require('./fuction/media/stickers.js');
+        let pack = "Thecowbots";
+        let author = pushname || "CowBot";
+        if (text && text.includes('|')) {
+            const parts = text.split('|');
+            pack = parts[0].trim();
+            author = parts[1].trim();
+        } else if (text) {
+            pack = text.trim();
+        }
 
-
-
-
-
-///////////////////HERRAMIENTAS///////////
-
-case 'amp3':
-case 'tomp3':
-  if(!isReg) return enviar(respuesta.registro)
-if(!isQuotedVideo) return enviar (`[❗] ${sender.split('@')[0]}, Marque un video `)
-enviar('`Creando....`')
-tomp = await getFileBuffer(info.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage , 'video')
-	sock.sendMessage(from,{audio :  tomp, mimetype: 'audio/mpeg'},{ quoted: info })		
-		await addXp(sender,6)
-		await delkoin(sender,3)
-				break 
-				
-		
-  case 'toimg':
-  if(!isReg) return enviar(respuesta.registro)
-if(!isQuotedSticker) return enviar('[❗]• 𝗠𝗔𝗥𝗤𝗨𝗘 𝗨𝗡 𝗦𝗧𝗜𝗖𝗞𝗘𝗥 •')
-try {
-enviar('`Creando....`')
-buff = await getFileBuffer(info.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage, 'sticker')
-sock.sendMessage(from, {image: buff , caption : ` [❗] *${pushname}*, Aquí tienes tu pedido `},{quoted : info }).catch(e => {
-console.log(e);
-enviar('Nose pudo convertir a imagen verifica que sea un sticker y no un gif ❌')
-})
-await addXp(sender,3)
-await delkoin(sender,2)
-} catch {
-enviar('ocurrio un error ')
+        const stkBuf = await getFileBuffer(stickerMsg, 'sticker');
+        const repacked = await addExif(stkBuf, pack, author);
+        await sock.sendMessage(from, { sticker: repacked }, { quoted: info });
+    } catch (e) {
+        console.error("Error en wm:", e.message);
+        enviar("❌ *Error al cambiar créditos:* " + e.message);
+    }
+    break;
 }
-break
 
+case 'toimg': {
+    if (!isReg) return enviar(respuesta.registro);
+    const RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const stickerMsg = RSM?.stickerMessage;
+    if (!stickerMsg) {
+        return enviar("🖼️ *Responde a un sticker con #toimg para convertirlo en imagen.*");
+    }
 
+    try {
+        enviar("⏳ *Convirtiendo sticker a imagen...*");
+        const { stickerToImage } = require('./fuction/media/stickers.js');
+        const stkBuf = await getFileBuffer(stickerMsg, 'sticker');
+        const pngBuf = await stickerToImage(stkBuf);
+        await sock.sendMessage(from, { image: pngBuf, caption: "✨ *Aquí tienes tu imagen, " + pushname + "*" }, { quoted: info });
+    } catch (e) {
+        console.error("Error en toimg:", e.message);
+        enviar("❌ *No se pudo convertir a imagen. Asegúrate de responder a un sticker válido.*");
+    }
+    break;
+}
 
+case 'tovideo':
+case 'tomp4': {
+    if (!isReg) return enviar(respuesta.registro);
+    const RSM = info.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const stickerMsg = RSM?.stickerMessage;
+    if (!stickerMsg) {
+        return enviar("🎬 *Responde a un sticker animado con #tovideo para convertirlo en video.*");
+    }
 
-
-
-
-
-
-//Economía niveles y experiencia 
+    try {
+        enviar("⏳ *Convirtiendo sticker a video...*");
+        const { stickerToVideo } = require('./fuction/media/stickers.js');
+        const stkBuf = await getFileBuffer(stickerMsg, 'sticker');
+        const mp4Buf = await stickerToVideo(stkBuf);
+        await sock.sendMessage(from, { video: mp4Buf, caption: "🎬 *Aquí tienes tu video, " + pushname + "*" }, { quoted: info });
+    } catch (e) {
+        console.error("Error en tovideo:", e.message);
+        enviar("❌ *No se pudo convertir a video. Verifica que el sticker sea animado.*");
+    }
+    break;
+}
 
 case 'perfil' : case 'cartera' :
 case 'nivel' : case 'minivel' : {
@@ -3086,436 +3096,227 @@ break;
 //DESCARGAS
 
 
-//nesecitas api
+// ==================== DESCARGAS MULTIMEDIA ====================
+case 'play':
+case 'play2':
+case 'musica':
+case 'ytmp3': {
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("🎵 *Escribe el nombre de la canción o un link de YouTube.*\nEjemplo: `#play never gonna give you up`");
+
+    enviar("🔍 *Buscando:* \"" + q + "\"...");
+    try {
+        const { downloadYoutube } = require('./fuction/media/downloaders.js');
+        const yt = await downloadYoutube(q, false);
+
+        const infoText = "╭───────────────╮\n" +
+          "│ 🎵 *YOUTUBE AUDIO* 🎵\n" +
+          "╰───────────────╯\n" +
+          "📌 *Título:* " + yt.title + "\n" +
+          "👤 *Canal:* " + yt.channel + "\n" +
+          "⏱️ *Duración:* " + yt.duration + "\n" +
+          "👁️ *Vistas:* " + yt.views + "\n" +
+          "🔗 *Enlace:* " + yt.url + "\n\n" +
+          "_Enviando audio, espera un momento..._";
+
+        if (yt.thumb) {
+            await sock.sendMessage(from, { image: { url: yt.thumb }, caption: infoText }, { quoted: info });
+        } else {
+            enviar(infoText);
+        }
+
+        await sock.sendMessage(from, {
+            audio: { url: yt.mp3 || yt.downloadUrl },
+            mimetype: 'audio/mpeg',
+            fileName: yt.title + ".mp3"
+        }, { quoted: info });
+    } catch (e) {
+        console.error("Error en play:", e.message);
+        enviar("❌ *Error al descargar audio:* " + e.message);
+    }
+    break;
+}
 
 case 'playvideo':
+case 'video':
 case 'ytmp4': {
-if(!isReg) return enviar(respuesta.registro)
-  if (!q)
-    return enviar('❌ Escribe un nombre o link de YouTube');
-  try {
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("🎬 *Escribe el nombre del video o un link de YouTube.*\nEjemplo: `#playvideo trailer gta 6`");
 
+    enviar("🔍 *Buscando video:* \"" + q + "\"...");
+    try {
+        const { downloadYoutube } = require('./fuction/media/downloaders.js');
+        const yt = await downloadYoutube(q, true);
 
+        const captionText = "╭───────────────╮\n" +
+          "│ 🎬 *YOUTUBE VIDEO* 🎬\n" +
+          "╰───────────────╯\n" +
+          "📌 *Título:* " + yt.title + "\n" +
+          "👤 *Canal:* " + yt.channel + "\n" +
+          "⏱️ *Duración:* " + yt.duration + "\n" +
+          "🔗 *Enlace:* " + yt.url;
 
-    // Endpoint info del video
-    const apiURL =
-      `${API_MEDIA}/ytinfo?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-    const apiData = await fetchJson(apiURL);
-
-    // SI YTINFO FUNCIONA
-    if (apiData && apiData.Estado === "online") {
-
-      const data = apiData.Resultado;
-
-      await sock.sendMessage(from, {
-        image: { url: data.Miniatura },
-        caption: `「✪」 *${data.Titulo}*\n\n*ⴵ Duración:* ${data.Duracion}\n*✐ Canal:* ${data.Canal.Nombre}\n*👁 Vistas:* ${data.Visualizaciones}\n*🜸 Link:* ${data.EnlaceYoutube}`
-      }, { quoted: info });
-
-      await sock.sendMessage(from, {
-        video: { url: `${data.EnlaceDescarga}&apikey=${MEDIA_KEY}` }, // 🔑 Agregar key también aquí
-        mimetype: 'video/mp4',
-        caption: data.Titulo
-      }, { quoted: info });
-
-      return;
+        await sock.sendMessage(from, {
+            video: { url: yt.mp4 || yt.downloadUrl },
+            caption: captionText
+        }, { quoted: info });
+    } catch (e) {
+        console.error("Error en playvideo:", e.message);
+        enviar("❌ *Error al descargar video:* " + e.message);
     }
-
-    // SI YTINFO FALLA → DESCARGA IGUAL
-    const videoURL =
-      `${API_MEDIA}/ytmp4?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-    await sock.sendMessage(from, {
-      video: { url: videoURL },
-      mimetype: 'video/mp4',
-      caption: q
-    }, { quoted: info });
-
-  } catch (e) {
-
-    console.log("ERROR PLAYVIDEO:", e);
-
-    enviar('❌ Error descargando video');
-
-  }
-
+    break;
 }
-break;
 
 case 'playdoc': {
-if(!isReg) return enviar(respuesta.registro)
-if (!q)
-return enviar('❌ Escribe un nombre o link de YouTube');
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📄 *Escribe el nombre o link de YouTube para descargar como documento.*");
 
-
-
-try {
-
-const apiURL =
-`${API_MEDIA}/ytinfo?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-const apiData = await fetchJson(apiURL);
-
-// SI YTINFO FUNCIONA
-if (apiData && apiData.Estado === "online") {
-
-const data = apiData.Resultado;
-
-await sock.sendMessage(from, {
-image: { url: data.Miniatura },
-caption: `「✪」 *${data.Titulo}*
-
-*ⴵ Duración:* ${data.Duracion}
-*✐ Canal:* ${data.Canal.Nombre}
-*👁 Vistas:* ${data.Visualizaciones}
-*🜸 Link:* ${data.EnlaceYoutube}
-`
-}, { quoted: info });
-
-
-await sock.sendMessage(from, {
-document: { url: `${data.EnlaceDescarga}&apikey=${MEDIA_KEY}` },
-mimetype: 'video/mp4',
-fileName: `${data.Titulo}.mp4`
-}, { quoted: info });
-
-return;
+    enviar("🔍 *Buscando:* \"" + q + "\"...");
+    try {
+        const { downloadYoutube } = require('./fuction/media/downloaders.js');
+        const yt = await downloadYoutube(q, false);
+        await sock.sendMessage(from, {
+            document: { url: yt.mp3 || yt.downloadUrl },
+            mimetype: 'audio/mpeg',
+            fileName: yt.title + ".mp3"
+        }, { quoted: info });
+    } catch (e) {
+        enviar("❌ *Error:* " + e.message);
+    }
+    break;
 }
 
+case 'tiktok':
+case 'tt': {
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📱 *Ingresa un enlace de TikTok.*");
 
-// SI YTINFO FALLA → DESCARGA IGUAL
-const videoURL =
-`${API_MEDIA}/ytmp4?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-await sock.sendMessage(from, {
-document: { url: videoURL },
-mimetype: 'video/mp4',
-fileName: `video.mp4`
-}, { quoted: info });
-
-} catch (e) {
-
-console.log("ERROR MP4DOC:", e);
-
-enviar('❌ Error enviando documento');
-
+    enviar("⏳ *Descargando video de TikTok sin marca de agua...*");
+    try {
+        const { downloadTiktok } = require('./fuction/media/downloaders.js');
+        const tt = await downloadTiktok(q.trim());
+        await sock.sendMessage(from, {
+            video: { url: tt.videoUrl },
+            caption: "╭───────────────╮\n" +
+              "│ 📱 *TIKTOK DOWNLOAD* 📱\n" +
+              "╰───────────────╯\n" +
+              "📌 *Título:* " + tt.title + "\n" +
+              "👤 *Autor:* " + tt.author
+        }, { quoted: info });
+    } catch (e) {
+        console.error("Error en tiktok:", e.message);
+        enviar("❌ *Error descargando TikTok:* " + e.message);
+    }
+    break;
 }
-
-}
-break;
-
-case 'play2': {
-if(!isReg) return enviar(respuesta.registro)
-if (!q) return enviar('❌ Escribe un nombre o link de YouTube')
-
-try {
-
-let query = encodeURIComponent(q.trim())
-
-// INFO
-let apiURL = `${API_MEDIA}/ytinfo?apikey=${MEDIA_KEY}&url=${query}`
-let apiData = await fetchJson(apiURL)
-
-if (apiData && apiData.Estado === "online" && apiData.Resultado) {
-
-let data = apiData.Resultado
-
-await sock.sendMessage(from, {
-image: { url: data.Miniatura },
-caption: `「✪」 *${data.Titulo}*
-
-ⴵ Duración: ${data.Duracion}
-✐ Canal: ${data.Canal.Nombre}
-👁 Vistas: ${data.Visualizaciones}
-
-📥 Descargando audio (modo iPhone)... Esto será un poco más lento que el /play, así que usa esto solo si tienes iPhone`
-}, { quoted: info })
-
-// AUDIO COMPATIBLE CON IPHONE
-await sock.sendMessage(from, {
-audio: {
-url: `${API_MEDIA}/ytmp3file?apikey=${MEDIA_KEY}&url=${encodeURIComponent(data.EnlaceYoutube)}`
-},
-mimetype: 'audio/mpeg',
-ptt: false
-}, { quoted: info })
-
-return
-}
-
-// FALLBACK
-await sock.sendMessage(from, {
-audio: {
-url: `${API_MEDIA}/ytmp3file?apikey=${MEDIA_KEY}&url=${query}`
-},
-mimetype: 'audio/mpeg',
-ptt: false
-}, { quoted: info })
-
-} catch (e) {
-
-console.log("ERROR PLAY2:", e)
-enviar('❌ Error descargando audio')
-
-}
-
-}
-break
-
-
-case 'play': {
-if(!isReg) return enviar(respuesta.registro)
-if (!q) return enviar('❌ Escribe un nombre o link de YouTube')
-
-try {
-
-let query = encodeURIComponent(q.trim())
-
-// INFO DEL VIDEO
-let apiURL = `${API_MEDIA}/ytinfo?apikey=${MEDIA_KEY}&url=${query}`
-
-let apiData = await fetchJson(apiURL)
-
-// SI LA API RESPONDE BIEN
-if (apiData && apiData.Estado === "online" && apiData.Resultado) {
-
-let data = apiData.Resultado
-
-await sock.sendMessage(from, {
-image: { url: data.Miniatura },
-caption: `「✪」 *${data.Titulo}*
-
-*ⴵ Duración:* ${data.Duracion}
-*✐ Canal:* ${data.Canal.Nombre}
-*👁 Vistas:* ${data.Visualizaciones}
-*🜸 Link:* ${data.EnlaceYoutube}
-
-*📥 Descargando audio...*`
-}, { quoted: info })
-
-// AUDIO
-await sock.sendMessage(from, {
-audio: {
-url: `${API_MEDIA}/ytmp3?apikey=${MEDIA_KEY}&url=${encodeURIComponent(data.EnlaceYoutube)}`
-},
-mimetype: 'audio/mpeg',
-ptt: false
-}, { quoted: info })
-
-return
-
-}
-
-
-// SI FALLA YTINFO → DESCARGA DIRECTO
-let audioURL = `${API_MEDIA}/ytmp3?apikey=${MEDIA_KEY}&url=${query}`
-
-await sock.sendMessage(from, {
-audio: { url: audioURL },
-mimetype: 'audio/mpeg',
-ptt: false
-}, { quoted: info })
-
-
-} catch (e) {
-
-console.log("ERROR PLAY:", e)
-
-enviar('❌ Error descargando música')
-
-}
-
-}
-break
-
-
-
-
 
 case 'fb':
 case 'facebook': {
-if(!isReg) return enviar(respuesta.registro)
-    if (!q)
-        return enviar('❌ Escribe un link de Facebook');
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📘 *Ingresa un enlace de Facebook.*");
 
-    
-
+    enviar("⏳ *Descargando video de Facebook...*");
     try {
-
-      
-        // URL de descarga directa (no JSON)
-        const videoURL = `${API_MEDIA}/fbvideo?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-        // Enviar video directamente al bot
+        const { downloadFacebook } = require('./fuction/media/downloaders.js');
+        const fb = await downloadFacebook(q.trim());
         await sock.sendMessage(from, {
-            video: { url: videoURL },
-            mimetype: 'video/mp4',
-            caption: `*🎬 Video de Facebook*\n${q}`
+            video: { url: fb.videoUrl },
+            caption: "╭───────────────╮\n" +
+              "│ 📘 *FACEBOOK VIDEO* 📘\n" +
+              "╰───────────────╯\n" +
+              "📌 *Título:* " + fb.title
         }, { quoted: info });
-
     } catch (e) {
-        console.log("ERROR FBVIDEO:", e);
-        enviar('❌ Error descargando video de Facebook');
+        console.error("Error en facebook:", e.message);
+        enviar("❌ *Error descargando Facebook:* " + e.message);
     }
-
+    break;
 }
-break;
 
+case 'ig':
+case 'instagram': {
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📸 *Ingresa un enlace de Instagram (Reel, Post o Video).*");
 
-case 'tiktok': {
-if(!isReg) return enviar(respuesta.registro)
-    if (!q)
-        return enviar('❌ Escribe un link de TikTok');
-
+    enviar("⏳ *Descargando contenido de Instagram...*");
     try {
-
-        // API key del usuario (puedes sacarla de tu DB si quieres dinámico)
-        
-        // Endpoint directo de descarga TikTok
-        const videoURL = `${API_MEDIA}/tiktok?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-        // Opcional: miniatura y título con un endpoint /ttinfo
-        // Por simplicidad aquí solo enviamos el video directamente
-        await sock.sendMessage(from, {
-            video: { url: videoURL },
-            mimetype: 'video/mp4',
-            caption: `*🎬 Video de TikTok*\n${q}`
-        }, { quoted: info });
-
+        const { downloadInstagram } = require('./fuction/media/downloaders.js');
+        const ig = await downloadInstagram(q.trim());
+        if (ig.isVideo) {
+            await sock.sendMessage(from, { video: { url: ig.mediaUrl }, caption: "📸 *Instagram Download*" }, { quoted: info });
+        } else {
+            await sock.sendMessage(from, { image: { url: ig.mediaUrl }, caption: "📸 *Instagram Download*" }, { quoted: info });
+        }
     } catch (e) {
-        console.log("ERROR TIKTOK:", e);
-        enviar('❌ Error descargando video de TikTok');
+        console.error("Error en instagram:", e.message);
+        enviar("❌ *Error descargando Instagram:* " + e.message);
     }
-
+    break;
 }
-break;
 
 case 'x':
 case 'twitter': {
-if(!isReg) return enviar(respuesta.registro)
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("🐦 *Ingresa un enlace de Twitter / X.*");
 
-    if (!q)
-        return enviar('❌ Escribe un link de X (Twitter)');
-
+    enviar("⏳ *Descargando video de Twitter / X...*");
     try {
-
-        // Endpoint de descarga de X
-        const videoURL = `${API_MEDIA}/twitter?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-        // Enviar video directamente
+        const { downloadTwitter } = require('./fuction/media/downloaders.js');
+        const tw = await downloadTwitter(q.trim());
         await sock.sendMessage(from, {
-            video: { url: videoURL },
-            mimetype: 'video/mp4',
-            caption: `*🐦 Video de X (Twitter)*\n${q}`
+            video: { url: tw.videoUrl },
+            caption: "╭───────────────╮\n" +
+              "│ 🐦 *TWITTER / X VIDEO* 🐦\n" +
+              "╰───────────────╯\n" +
+              "📌 " + tw.title
         }, { quoted: info });
-
     } catch (e) {
-        console.log("ERROR TWITTER:", e);
-        enviar('❌ Error descargando video de X (Twitter)');
+        console.error("Error en twitter:", e.message);
+        enviar("❌ *Error descargando Twitter / X:* " + e.message);
     }
-
+    break;
 }
-break;
 
 case 'mediafire': {
-if(!isReg) return enviar(respuesta.registro)
-    if (!q) return enviar('❌ Envia un link de MediaFire');
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📦 *Ingresa un enlace de MediaFire.*");
 
-    enviar("📥 Descargando archivo...");
-
+    enviar("⏳ *Analizando enlace de MediaFire...*");
     try {
-
-        const axios = require("axios");
-
-        const apiURL = `${API_MEDIA}/mediafire-dl?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q)}&t=${Date.now()}`;
-
-        const response = await axios.get(apiURL, {
-            responseType: 'arraybuffer'
-        });
-
-        // Obtener nombre desde header
-        let fileName = "archivo";
-
-        const disposition = response.headers['content-disposition'];
-
-        if (disposition && disposition.includes("filename=")) {
-            fileName = disposition
-                .split("filename=")[1]
-                .replace(/"/g, "")
-                .trim();
-        }
-
-        const mimeType = response.headers['content-type'] || 'application/octet-stream';
-
+        const { downloadMediafire } = require('./fuction/media/downloaders.js');
+        const mf = await downloadMediafire(q.trim());
+        enviar("📦 *Descargando:* " + mf.filename + " (" + mf.size + ")...\n_Enviando archivo..._");
         await sock.sendMessage(from, {
-            document: Buffer.from(response.data),
-            mimetype: mimeType,
-            fileName: fileName
+            document: { url: mf.url },
+            fileName: mf.filename,
+            mimetype: 'application/octet-stream'
         }, { quoted: info });
-
     } catch (e) {
-        console.log(e);
-        enviar('❌ Error descargando archivo');
+        console.error("Error en mediafire:", e.message);
+        enviar("❌ *Error descargando MediaFire:* " + e.message);
     }
-
+    break;
 }
-break;
 
-case 'instagram': {
-if(!isReg) return enviar(respuesta.registro)
-    if (!q)
-        return enviar('❌ Escribe un link de Instagram');
+case 'pin':
+case 'pinterest': {
+    if (!isReg) return enviar(respuesta.registro);
+    if (!q) return enviar("📌 *Escribe qué deseas buscar en Pinterest.*\nEjemplo: `#pinterest aesthetic wallpaper`");
 
+    enviar("🔍 *Buscando en Pinterest:* \"" + q + "\"...");
     try {
-        // Endpoint directo de descarga Instagram
-        const videoURL = `${API_MEDIA}/instagram?apikey=${MEDIA_KEY}&url=${encodeURIComponent(q.trim())}`;
-
-        // Enviar video directamente al bot
+        const { searchPinterest } = require('./fuction/media/downloaders.js');
+        const imgUrl = await searchPinterest(q.trim());
         await sock.sendMessage(from, {
-            video: { url: videoURL },
-            mimetype: 'video/mp4',
-            caption: `*🎬 Video de Instagram*\n${q}`
+            image: { url: imgUrl },
+            caption: "📌 *Resultado de Pinterest para:* " + q
         }, { quoted: info });
-
     } catch (e) {
-        console.log("ERROR INSTAGRAM:", e);
-        enviar('❌ Error descargando video de Instagram');
+        console.error("Error en pinterest:", e.message);
+        enviar("❌ *Error buscando en Pinterest:* " + e.message);
     }
-
+    break;
 }
-break;
-
-
-//nesecitas api
-case 'pinterest':
-case 'pin': {
-if(!isReg) return enviar(respuesta.registro)
-  if (!q)
-    return enviar('❌ Escribe qué quieres buscar');
-
-  try {
-
-    const apiURL =
-      `${API_MEDIA}/pinterest-search?apikey=${MEDIA_KEY}&q=${encodeURIComponent(q)}&t=${Date.now()}`;
-
-    await sock.sendMessage(from, {
-      image: { url: apiURL },
-      caption: `*📌 Resultado para:* ${q}`
-    }, { quoted: info });
-
-  } catch (e) {
-
-    console.log("ERROR PINTEREST:", e);
-    enviar('❌ Error buscando la imagen');
-
-  }
-
-}
-break;
-
-
-  
 
 case 'wikipedia': case 'wiki': {
     let query = args.join(" ");
@@ -3647,7 +3448,9 @@ case 'quieromoverelbote': {
                 if (res.data && res.data.results && res.data.results.length > 0) {
                     let gifUrl = res.data.results[0].url;
                     let txt = `╭ ₊˚ ✧ 🪩 *PARTY* 🪩 ✧ ˚₊ ╮\n│ ${randomMsg}\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
-                    await sock.sendMessage(from, { video: { url: gifUrl }, gifPlayback: true, caption: txt });
+                    const { getReactionMp4 } = require('./fuction/media/reactions.js');
+                const { mp4Buffer } = await getReactionMp4('dance');
+                await sock.sendMessage(from, { video: mp4Buffer, gifPlayback: true, caption: txt });
                 }
             } catch (e) {
                 console.error("Party mode error:", e.message || e);
@@ -3767,7 +3570,9 @@ case 'smoke': case 'spit': case 'escupir': case 'step': case 'pisar': case 'thin
             
             let txt = `╭ ₊˚ ✧ 🎭 *REACCIÓN* 🎭 ✧ ˚₊ ╮\n│ ${msgText}\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
             
-            await sock.sendMessage(from, { video: { url: gifUrl }, gifPlayback: true, caption: txt, mentions: mentioned ? [mentioned] : [] }, { quoted: info });
+            const { getReactionMp4 } = require('./fuction/media/reactions.js');
+            const { mp4Buffer } = await getReactionMp4(nekosEndpoint);
+            await sock.sendMessage(from, { video: mp4Buffer, gifPlayback: true, caption: txt, mentions: mentioned ? [mentioned] : [] }, { quoted: info });
         } else {
             enviar("❌ No encontré un GIF para esa reacción.");
         }

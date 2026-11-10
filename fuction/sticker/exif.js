@@ -4,6 +4,7 @@ const Crypto = require("crypto")
 const ff = require('fluent-ffmpeg')
 const webp = require("node-webpmux")
 const path = require("path")
+try { ff.setFfmpegPath(require('@ffmpeg-installer/ffmpeg').path); } catch (e) {}
 
 
 async function imageToWebp (media) {

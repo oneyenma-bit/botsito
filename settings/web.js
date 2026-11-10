@@ -700,3 +700,4 @@ function getDashboardHtml(data) {
 }
 
 module.exports = { getDashboardHtml };
+
