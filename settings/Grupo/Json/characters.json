@@ -1,0 +1,58 @@
+[
+  {
+    "id": "1",
+    "name": "Naruto Uzumaki",
+    "anime": "Naruto Shippuden",
+    "value": 500,
+    "image": "https://i.postimg.cc/NfJfvsBW/Untitled-05-12-2024-09-16-50-1.png"
+  },
+  {
+    "id": "2",
+    "name": "Sasuke Uchiha",
+    "anime": "Naruto Shippuden",
+    "value": 450,
+    "image": "https://i.postimg.cc/PxjdQNQ8/Untitled-05-12-2024-09-16-50-2.png"
+  },
+  {
+    "id": "3",
+    "name": "Son Goku",
+    "anime": "Dragon Ball Z",
+    "value": 1000,
+    "image": "https://i.postimg.cc/HL5pMbXg/Untitled-05-12-2024-09-16-50-3.png"
+  },
+  {
+    "id": "4",
+    "name": "Monkey D. Luffy",
+    "anime": "One Piece",
+    "value": 850,
+    "image": "https://i.postimg.cc/Cx9hdcZ7/Untitled-05-12-2024-09-16-50-5.png"
+  },
+  {
+    "id": "5",
+    "name": "Satoru Gojo",
+    "anime": "Jujutsu Kaisen",
+    "value": 1200,
+    "image": "https://i.postimg.cc/NfJfvsBW/Untitled-05-12-2024-09-16-50-1.png"
+  },
+  {
+    "id": "6",
+    "name": "Rem",
+    "anime": "Re:Zero",
+    "value": 1500,
+    "image": "https://i.postimg.cc/PxjdQNQ8/Untitled-05-12-2024-09-16-50-2.png"
+  },
+  {
+    "id": "7",
+    "name": "Zero Two",
+    "anime": "Darling in the Franxx",
+    "value": 1600,
+    "image": "https://i.postimg.cc/HL5pMbXg/Untitled-05-12-2024-09-16-50-3.png"
+  },
+  {
+    "id": "8",
+    "name": "Makima",
+    "anime": "Chainsaw Man",
+    "value": 1400,
+    "image": "https://i.postimg.cc/Cx9hdcZ7/Untitled-05-12-2024-09-16-50-5.png"
+  }
+]
