@@ -1,6 +1,6 @@
 {
   "183786683805814@lid": {
-    "lastRoll": 1783221334136,
+    "lastRoll": 1794343774713,
     "characters": [
       {
         "id": "8",
@@ -80,9 +80,15 @@
         "anime": "Ao no Exorcist",
         "value": 1311,
         "image": "https://s4.anilist.co/file/anilistcdn/character/large/b43187-uJySWMkmaWmZ.png"
+      },
+      {
+        "name": "Shinichi Izumi",
+        "anime": "Kiseijuu: Sei no Kakuritsu",
+        "value": 1746,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b12323-NAoqDYOn2RSo.png"
       }
     ],
-    "totalRolls": 8
+    "totalRolls": 10
   },
   "76991835422911@lid": {
     "lastRoll": 1783136249466,
@@ -97,40 +103,40 @@
     "totalRolls": 14
   },
   "71403982348508@lid": {
-    "lastRoll": 1783049374332,
+    "lastRoll": 1794341810338,
     "characters": [
-      {
-        "name": "Mito Fujimori",
-        "anime": "Anime Character",
-        "value": 1625,
-        "image": "https://cdn.myanimelist.net/images/characters/5/334039.jpg"
-      },
-      {
-        "name": "Taichi Yagami",
-        "anime": "Unknown",
-        "value": 1855,
-        "image": "https://cdn.myanimelist.net/images/characters/2/116622.jpg"
-      },
       {
         "name": "Miya Chinen",
         "anime": "SK∞",
         "value": 993,
         "image": "https://s4.anilist.co/file/anilistcdn/character/large/b195121-FehldtuXxYXh.png"
+      },
+      {
+        "name": "Alphonse Elric",
+        "anime": "Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST",
+        "value": 785,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b12-tCKu8yK5kFL5.jpg"
       }
     ],
-    "totalRolls": 3
+    "totalRolls": 4
   },
   "44689805819948@lid": {
-    "lastRoll": 1783115924482,
+    "lastRoll": 1794342915081,
     "characters": [
       {
         "name": "Rudeus Greyrat",
         "anime": "Mushoku Tensei: Isekai Ittara Honki Dasu",
         "value": 1495,
         "image": "https://s4.anilist.co/file/anilistcdn/character/large/b88348-bIe5XnXdRpmX.png"
+      },
+      {
+        "name": "Joutarou Kuujou",
+        "anime": "JoJo no Kimyou na Bouken (TV)",
+        "value": 4728,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b4003-gWDSEGbeOAll.png"
       }
     ],
-    "totalRolls": 9
+    "totalRolls": 10
   },
   "127801248227400@lid": {
     "lastRoll": 1783017300925,
@@ -286,7 +292,7 @@
     "totalRolls": 4
   },
   "78469371277521@lid": {
-    "lastRoll": 1783118704704,
+    "lastRoll": 1794341785108,
     "characters": [
       {
         "name": "Alexander Volg Zangief",
@@ -329,9 +335,15 @@
         "anime": "Itai no wa Iya nano de Bougyoryoku ni Kyokufuri Shitai to Omoimasu.",
         "value": 1617,
         "image": "https://s4.anilist.co/file/anilistcdn/character/large/b147893-t481NA7vtmdF.png"
+      },
+      {
+        "name": "Meruem",
+        "anime": "HUNTER×HUNTER (2011)",
+        "value": 1776,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b23277-EYmIxzL64Mji.png"
       }
     ],
-    "totalRolls": 6
+    "totalRolls": 7
   },
   "106747335319656@lid": {
     "lastRoll": 1783120200393,
@@ -352,7 +364,7 @@
     "totalRolls": 3
   },
   "250482878591199@lid": {
-    "lastRoll": 1783132484460,
+    "lastRoll": 1794343183613,
     "characters": [
       {
         "name": "Karakorumu Brother",
@@ -401,9 +413,27 @@
         "anime": "Nisekoi",
         "value": 1006,
         "image": "https://s4.anilist.co/file/anilistcdn/character/large/b58885-w07G5SNbFBBW.png"
+      },
+      {
+        "name": "Jolyne Kuujou",
+        "anime": "JoJo no Kimyou na Bouken: Stone Ocean",
+        "value": 1398,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b11222-Se9QoJHDSeYY.png"
+      },
+      {
+        "name": "Nino Nakano",
+        "anime": "Go-toubun no Hanayome",
+        "value": 1051,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b126372-DtorHRgQaYUJ.png"
+      },
+      {
+        "name": "Shinobu Oshino",
+        "anime": "Bakemonogatari",
+        "value": 3628,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/b23602-Z4MDNYcoAWZu.png"
       }
     ],
-    "totalRolls": 7
+    "totalRolls": 9
   },
   "180805389316229@lid": {
     "lastRoll": 1783127703422,
@@ -530,5 +560,17 @@
   "101688300036156@lid": {
     "lastRoll": 0,
     "characters": []
+  },
+  "66989276016837@lid": {
+    "lastRoll": 1794341865009,
+    "characters": [
+      {
+        "name": "Shinra Kusakabe",
+        "anime": "Enen no Shouboutai",
+        "value": 1543,
+        "image": "https://s4.anilist.co/file/anilistcdn/character/large/n120462-oSWdz2MhkbDE.png"
+      }
+    ],
+    "totalRolls": 1
   }
 }

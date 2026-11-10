@@ -1,9 +1,102 @@
-// Thecowbots - WhatsApp Bot
+// Thecowbots - WhatsApp Bot & Sub-Bot Manager
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('Bot is running!'));
-app.listen(port, () => console.log(`Web server listening on port ${port}`));
+const { getDashboardHtml } = require('./settings/web.js');
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Estado global del bot y sub-bots
+global.botStatus = {
+  state: 'initializing',
+  pairingCode: null,
+  phoneNumber: (process.env.PHONE_NUMBER || '50492772142').replace(/[^0-9]/g, ''),
+  connectedAt: null,
+  error: null
+};
+global.subBots = new Map();
+global.mainSock = null;
+
+// Dashboard Web
+app.get('/', (req, res) => {
+  res.send(getDashboardHtml({
+    ...global.botStatus,
+    subBots: Array.from(global.subBots.values()),
+    uptime: process.uptime()
+  }));
+});
+
+// API Estado
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: global.botStatus.state,
+    pairingCode: global.botStatus.pairingCode,
+    phoneNumber: global.botStatus.phoneNumber,
+    uptime: Math.floor(process.uptime()),
+    connectedAt: global.botStatus.connectedAt,
+    subBotsCount: global.subBots.size,
+    subBots: Array.from(global.subBots.values()).map(b => ({
+      phoneNumber: b.phoneNumber,
+      status: b.status,
+      pairingCode: b.pairingCode,
+      adminJid: b.adminJid,
+      startedAt: b.startedAt
+    }))
+  });
+});
+
+// API Solicitar nuevo código
+app.get('/api/pair', async (req, res) => {
+  try {
+    const num = (req.query.number || global.botStatus.phoneNumber || '50492772142').replace(/[^0-9]/g, '');
+    if (!global.mainSock) {
+      return res.status(503).json({ error: 'Socket no inicializado aún.' });
+    }
+    if (global.mainSock.authState?.creds?.registered) {
+      return res.json({ message: 'El bot ya está registrado y conectado.', status: 'connected' });
+    }
+    const code = await global.mainSock.requestPairingCode(num);
+    global.botStatus.pairingCode = code;
+    global.botStatus.state = 'pairing';
+    global.botStatus.phoneNumber = num;
+    res.json({ success: true, code, phoneNumber: num });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API Detener Sub-Bot
+app.get('/api/subbots/stop', (req, res) => {
+  const num = (req.query.number || '').replace(/[^0-9]/g, '');
+  if (!num) return res.status(400).json({ error: 'Número no especificado.' });
+  if (global.subBots.has(num)) {
+    const sub = global.subBots.get(num);
+    try { if (sub.sock) sub.sock.end(new Error('Detenido desde el panel web')); } catch (e) {}
+    global.subBots.delete(num);
+  }
+  const subDir = './subbots/' + num;
+  try { fs.rmSync(subDir, { recursive: true, force: true }); } catch (e) {}
+  res.json({ success: true, message: 'Sub-Bot +' + num + ' detenido.' });
+});
+
+// API Resetear Sesión
+app.post('/api/reset-session', async (req, res) => {
+  try {
+    if (global.mainSock) {
+      try { global.mainSock.end(new Error('Reset solicitado desde el panel web')); } catch (e) {}
+    }
+    try { fs.rmSync('./session', { recursive: true, force: true }); } catch (e) {} 
+    global.botStatus.state = 'pairing';
+    global.botStatus.pairingCode = null;
+    res.json({ success: true, message: 'Sesión borrada, regenerando socket...' });
+    setTimeout(() => startProo(), 2000);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(port, () => console.log('Web server listening on port ' + port));
 
 //Modulos
 require('dotenv').config();
@@ -157,18 +250,29 @@ const groupCache = new Map();
 async function startProo() {
   console.clear();
   console.log(banner.string);
-  console.log(chalk.cyanBright("🔥 CowBot Base"));
+  console.log(chalk.cyanBright("🔥 Thecowbots Base"));
+
+  const targetNumber = (process.env.PHONE_NUMBER || "50492772142").replace(/[^0-9]/g, "");
+  global.botStatus.phoneNumber = targetNumber;
 
   // Estado de sesión
   const { state, saveCreds } = await useMultiFileAuthState("./session");
   const { version, isLatest } = await fetchLatestBaileysVersion();
   const msgRetryCounterCache = new NodeCache();
 
+  // Si ya existía una sesión registrada con un número distinto, resetear para vincular el nuevo
+  const currentRegisteredId = state.creds?.me?.id?.split(':')[0]?.split('@')[0];
+  if (state.creds?.registered && currentRegisteredId && currentRegisteredId !== targetNumber) {
+    console.log(chalk.yellow("⚠️ Sesión registrada actual (+" + currentRegisteredId + ") no coincide con el número configurado (+" + targetNumber + "). Reseteando sesión..."));
+    try { fs.rmSync("./session", { recursive: true, force: true }); } catch (e) {}
+    return setTimeout(() => startProo(), 2000);
+  }
+
   // Crear socket
   const sock = makeWASocket({
     version,
     logger: pino({ level: "silent" }),
-    printQRInTerminal: false, // Desactivado para no mostrar QR
+    printQRInTerminal: false,
     browser: ["Mac OS", "chrome", "121.0.6167.159"],
     auth: {
       creds: state.creds,
@@ -180,52 +284,60 @@ async function startProo() {
     syncFullHistory: false,
   });
 
-  // 🟢 Si no hay sesión registrada, generar el código de vinculación de 8 dígitos
+  global.mainSock = sock;
+
+  // Solicitar código de vinculación si no está registrado
   if (!sock.authState.creds.registered) {
-    let number = process.env.PHONE_NUMBER;
-    if (!number) {
-        number = await question(
-            chalk.cyan("📱 Escribe tu número de WhatsApp con código de país (solo números): ")
-        );
-        rl.close();
-    }
-    number = number.replace(/[^0-9]/g, "");
-
-    if (!number) {
-      console.log(chalk.red("❌ Número inválido."));
-      process.exit(1);
-    }
-
-    console.log(chalk.yellow("⌛ Solicitando código de vinculación..."));
+    global.botStatus.state = 'pairing';
+    console.log(chalk.yellow("⏳ Solicitando código de vinculación para +" + targetNumber + "..."));
     try {
-      await delay(1500);
-      const code = await sock.requestPairingCode(number);
+      await delay(2500);
+      const code = await sock.requestPairingCode(targetNumber);
+      global.botStatus.pairingCode = code;
       console.log(chalk.bgGreen.black("✅ CÓDIGO DE VINCULACIÓN:"), chalk.white(code));
     } catch (err) {
       console.error(chalk.red("❌ Error al generar código de vinculación:"), err.message);
-      process.exit(1);
+      global.botStatus.error = err.message;
+      setTimeout(async () => {
+        if (!sock.authState.creds.registered) {
+          try {
+            const retryCode = await sock.requestPairingCode(targetNumber);
+            global.botStatus.pairingCode = retryCode;
+            console.log(chalk.bgGreen.black("✅ CÓDIGO DE VINCULACIÓN (REINTENTO):"), chalk.white(retryCode));
+          } catch (e) {
+            console.error("Reintento de código fallido:", e.message);
+          }
+        }
+      }, 15000);
     }
   }
 
-  // 🔄 Monitorear el estado de conexión
+  // Monitorear el estado de conexión
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
 
     if (connection === "close") {
+      global.botStatus.state = 'disconnected';
       const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
       if (reason === DisconnectReason.loggedOut) {
-        console.log(chalk.red("❌ Sesión cerrada. Borra la carpeta 'session' y vuelve a emparejar."));
+        console.log(chalk.red("❌ Sesión cerrada. Borrando session y volviendo a emparejar..."));
+        try { fs.rmSync("./session", { recursive: true, force: true }); } catch (e) {}
+        setTimeout(() => startProo(), 3000);
       } else {
         console.log(chalk.yellow("⚠️ Conexión cerrada, reconectando..."));
-        startProo();
+        setTimeout(() => startProo(), 3000);
       }
     } else if (connection === "open") {
       console.log(chalk.greenBright("✅ Conectado exitosamente"));
+      global.botStatus.state = 'connected';
+      global.botStatus.pairingCode = null;
+      global.botStatus.connectedAt = Date.now();
       try {
         if (!fs.existsSync('./tmp')) {
           fs.mkdirSync('./tmp', { recursive: true });
         }
       } catch (e) {}
+      await restaurarSubBots(sock);
     }
   });
 
@@ -332,9 +444,162 @@ console.log('Error: %s', color(e, "red"))
 })
 
 sock.ev.on('creds.update', saveCreds)
-sock.ev.on("messages.upsert",  () => { })
 
-sock.ev.on('messages.upsert', async m => {
+  sock.ev.on('messages.upsert', async (m) => {
+    try {
+      await procesarMensaje(sock, m);
+    } catch (e) {
+      console.error('Error procesando mensaje en bot principal:', e);
+    }
+  });
+} // fin startProo
+
+
+// ==========================================
+// SISTEMA DE SUB-BOTS / JADIBOTS
+// ==========================================
+async function iniciarSubBot(targetNumber, fromJid, adminJid, parentSock) {
+  const subbotDir = './subbots/' + targetNumber;
+  if (!fs.existsSync(subbotDir)) {
+    fs.mkdirSync(subbotDir, { recursive: true });
+  }
+
+  const { state: subState, saveCreds: saveSubCreds } = await useMultiFileAuthState(subbotDir);
+  const { version } = await fetchLatestBaileysVersion();
+  const msgRetryCounterCache = new NodeCache();
+
+  const subSock = makeWASocket({
+    version,
+    logger: pino({ level: "silent" }),
+    printQRInTerminal: false,
+    browser: ["Mac OS", "chrome", "121.0.6167.159"],
+    auth: {
+      creds: subState.creds,
+      keys: makeCacheableSignalKeyStore(subState.keys, pino({ level: "fatal" }))
+    },
+    markOnlineOnConnect: true,
+    generateHighQualityLinkPreview: true,
+    msgRetryCounterCache,
+    syncFullHistory: false,
+  });
+
+  if (!global.subBots) global.subBots = new Map();
+  global.subBots.set(targetNumber, {
+    phoneNumber: targetNumber,
+    sock: subSock,
+    adminJid,
+    fromJid,
+    status: subSock.authState.creds.registered ? 'connected' : 'pairing',
+    pairingCode: null,
+    startedAt: Date.now()
+  });
+
+  if (!subSock.authState.creds.registered) {
+    try {
+      await delay(2000);
+      const code = await subSock.requestPairingCode(targetNumber);
+      const entry = global.subBots.get(targetNumber);
+      if (entry) entry.pairingCode = code;
+
+      const adminTag = adminJid ? '@' + adminJid.split('@')[0] : '@' + targetNumber;
+      const msgTexto = '╭───────────────╮\n' +
+        '│ 🤖 *SUB-BOT / JADIBOT* 🤖\n' +
+        '╰───────────────╯\n' +
+        '👑 *Admin autorizante:* ' + adminTag + '\n' +
+        '📱 *Número a vincular:* +' + targetNumber + '\n' +
+        '🔑 *CÓDIGO DE VINCULACIÓN:*\n\n' +
+        '👉   *' + code + '*   👈\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━\n' +
+        '📌 *PASOS PARA VINCULAR EN WHATSAPP:*\n' +
+        '1️⃣ Abre WhatsApp en el celular *+' + targetNumber + '*.\n' +
+        '2️⃣ Entra a *Ajustes / Configuración* ⚙️\n' +
+        '3️⃣ Selecciona *Dispositivos vinculados*.\n' +
+        '4️⃣ Toca *Vincular un dispositivo*.\n' +
+        '5️⃣ Elige abajo *Vincular con el número de teléfono*.\n' +
+        '6️⃣ Introduce el código de 8 dígitos de arriba.\n\n' +
+        '⏱️ _Este código vence en 2 minutos._';
+
+      if (parentSock && fromJid) {
+        await parentSock.sendMessage(fromJid, {
+          text: msgTexto,
+          mentions: adminJid ? [adminJid] : []
+        });
+      }
+    } catch (err) {
+      console.error('Error generando código Sub-Bot para ' + targetNumber + ':', err.message);
+      if (parentSock && fromJid) {
+        await parentSock.sendMessage(fromJid, {
+          text: '❌ *Error al generar código de vinculación para +' + targetNumber + ':* ' + err.message
+        });
+      }
+      global.subBots.delete(targetNumber);
+      return;
+    }
+  }
+
+  subSock.ev.on('creds.update', saveSubCreds);
+
+  subSock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect } = update;
+    const entry = global.subBots.get(targetNumber);
+
+    if (connection === 'open') {
+      console.log(chalk.greenBright('✅ Sub-Bot +' + targetNumber + ' conectado exitosamente!'));
+      if (entry) {
+        entry.status = 'connected';
+        entry.pairingCode = null;
+        entry.connectedAt = Date.now();
+      }
+      if (parentSock && fromJid) {
+        await parentSock.sendMessage(fromJid, {
+          text: '🎉 *¡Sub-Bot activado con éxito para +' + targetNumber + '!* 🎉\n\nEste número ahora cuenta con todas las funciones, comandos, economía e IA del bot principal. ¡A disfrutar!',
+          mentions: adminJid ? [adminJid] : []
+        }).catch(() => {});
+      }
+    } else if (connection === 'close') {
+      const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      if (reason === DisconnectReason.loggedOut) {
+        console.log(chalk.red('❌ Sub-Bot +' + targetNumber + ' cerró sesión.'));
+        global.subBots.delete(targetNumber);
+        try { fs.rmSync(subbotDir, { recursive: true, force: true }); } catch (e) {}
+      } else {
+        console.log(chalk.yellow('⚠️ Sub-Bot +' + targetNumber + ' desconectado temporalmente...'));
+      }
+    }
+  });
+
+  subSock.ev.on('messages.upsert', async (m) => {
+    try {
+      await procesarMensaje(subSock, m);
+    } catch (e) {
+      console.error('Error procesando mensaje en sub-bot (' + targetNumber + '):', e);
+    }
+  });
+}
+
+async function restaurarSubBots(mainSock) {
+  const baseDir = './subbots';
+  if (!fs.existsSync(baseDir)) return;
+  const dirs = fs.readdirSync(baseDir, { withFileTypes: true });
+  for (const dir of dirs) {
+    if (dir.isDirectory()) {
+      const targetNumber = dir.name;
+      const credsPath = baseDir + '/' + targetNumber + '/creds.json';
+      if (fs.existsSync(credsPath)) {
+        console.log(chalk.cyan('🔄 Restaurando sesión de Sub-Bot para +' + targetNumber + '...'));
+        try {
+          await iniciarSubBot(targetNumber, null, null, mainSock);
+        } catch (e) {
+          console.error('Error restaurando sub-bot ' + targetNumber + ':', e.message);
+        }
+      }
+    }
+  }
+}
+
+
+async function procesarMensaje(sock, m) {
+
  try {
  const info = m.messages[0]
  if (!info.message) return 
@@ -351,6 +616,8 @@ var pes = (type === 'conversation' && info.message.conversation) ? info.message.
 
 const numerodono = [
   `${owner}`,
+  "50583879273@s.whatsapp.net",
+  "50492772142@s.whatsapp.net",
   "183786683805814@lid"
 ];
 
@@ -708,6 +975,98 @@ if (!botActivo && !isOwner) return
 switch(comando) {
 
 
+
+// ==================== SUB-BOTS / JADIBOTS ====================
+case 'serbot':
+case 'jadibot': {
+  if (!isGroup) return enviar(respuesta.grupos);
+  if (!isGroupAdmins && !isOwner) {
+    return enviar("👑 *Este comando está reservado exclusivamente para los administradores del grupo.*");
+  }
+
+  let targetNumber = args[0] ? args[0].replace(/[^0-9]/g, '') : senderNumber;
+  if (!targetNumber || targetNumber.length < 8) {
+    return enviar("⚠️ *Número de teléfono no válido.* Asegúrate de incluir el código de país (ejemplo: `#serbot 50492772142`).");
+  }
+
+  if (global.subBots && global.subBots.has(targetNumber)) {
+    const existing = global.subBots.get(targetNumber);
+    if (existing && existing.sock && existing.sock.user) {
+      return enviar('⚠️ *Ya hay un Sub-Bot activo vinculado al número +' + targetNumber + '.*\nUsa *#stopbot* si deseas desconectarlo.');
+    }
+  }
+
+  enviar('⏳ *Iniciando vinculación de Sub-Bot para +' + targetNumber + '...*\n_Generando código de emparejamiento de 8 dígitos, espera un momento..._');
+
+  await iniciarSubBot(targetNumber, from, sender, sock);
+  break;
+}
+
+case 'stopbot':
+case 'detenerserbot':
+case 'deleteserbot': {
+  if (!isGroupAdmins && !isOwner) {
+    return enviar("👑 *Solo los administradores del grupo o el creador pueden detener un Sub-Bot.*");
+  }
+
+  let targetNumber = args[0] ? args[0].replace(/[^0-9]/g, '') : senderNumber;
+  if (!global.subBots || !global.subBots.has(targetNumber)) {
+    const subDir = './subbots/' + targetNumber;
+    if (fs.existsSync(subDir)) {
+      try { fs.rmSync(subDir, { recursive: true, force: true }); } catch (e) {}
+      return enviar('🛑 *La sesión del Sub-Bot para +' + targetNumber + ' fue eliminada del almacenamiento.*');
+    }
+    return enviar('⚠️ *No se encontró ningún Sub-Bot activo para el número +' + targetNumber + '.*\nUsa *#subbots* para ver la lista de bots activos.');
+  }
+
+  const sub = global.subBots.get(targetNumber);
+  try {
+    if (sub.sock) {
+      sub.sock.end(new Error('SubBot terminado por usuario'));
+    }
+  } catch (e) {}
+
+  global.subBots.delete(targetNumber);
+  const subDir = './subbots/' + targetNumber;
+  try {
+    fs.rmSync(subDir, { recursive: true, force: true });
+  } catch (e) {}
+
+  enviar('🛑 *El Sub-Bot para +' + targetNumber + ' ha sido detenido y su sesión eliminada exitosamente.*');
+  break;
+}
+
+case 'subbots':
+case 'botsactivos':
+case 'listsubbots': {
+  const total = global.subBots ? global.subBots.size : 0;
+  if (total === 0) {
+    return enviar('╭───────────────╮\n' +
+      '│ 🤖 *SUB-BOTS ACTIVOS* 🤖\n' +
+      '╰───────────────╯\n' +
+      'ℹ️ *No hay ningún Sub-Bot activo en este momento.*\n\n' +
+      '👑 Si eres administrador de este grupo, puedes activar uno con *#serbot*');
+  }
+
+  let texto = '╭───────────────╮\n' +
+    '│ 🤖 *SUB-BOTS ACTIVOS* (' + total + ') 🤖\n' +
+    '╰───────────────╯\n\n';
+
+  let idx = 1;
+  const mentionsArr = [];
+  for (const [num, data] of global.subBots.entries()) {
+    const estado = data.status === 'connected' ? '🟢 Conectado' : '🟡 Vinculando';
+    const tag = data.adminJid ? '@' + data.adminJid.split('@')[0] : 'Sistema';
+    if (data.adminJid) mentionsArr.push(data.adminJid);
+    texto += idx + '️⃣ *Número:* +' + num + '\n   • *Estado:* ' + estado + '\n   • *Admin:* ' + tag + '\n\n';
+    idx++;
+  }
+
+  texto += '💡 Usa *#serbot* para agregar otro o *#stopbot* para detener el tuyo.';
+  await sock.sendMessage(from, { text: texto, mentions: mentionsArr }, { quoted: info });
+  break;
+}
+// =============================================================
 case 'prueba':
 enviar(`Este es un comando de prueba 🌟🌟
 
@@ -3766,17 +4125,8 @@ console.log('Error : %s', color(e, 'red'))
  
  
         
-    })
-
-
     
-}
-///////////MODIFIC INDEX 
-startProo()
-fs.watchFile('./index.js', (curr, prev) => {
-if (curr.mtime.getTime() !== prev.mtime.getTime()) {
-console.log(color('  [❗] El archivo Index fue modificada',"blue"));
-process.exit()
-}
-})
+} // fin procesarMensaje
 
+/////////// INICIAR BOT
+startProo();

@@ -1,11 +1,11 @@
 {
   "183786683805814@lid": {
-    "wallet": 10000000,
-    "bank": 4.3167264773582166e+22,
+    "wallet": 0,
+    "bank": 4.316726477358217e+22,
     "lastDaily": 1782964979787,
-    "lastWork": 1794281254678,
+    "lastWork": 1794339728322,
     "lastCrime": 1783028620195,
-    "lastSlut": 1783028623771
+    "lastSlut": 1794339730218
   },
   "76991835422911@lid": {
     "wallet": 0,
@@ -16,12 +16,12 @@
     "lastSlut": 1783013636349
   },
   "71403982348508@lid": {
-    "wallet": 1,
+    "wallet": 40,
     "bank": 0,
-    "lastDaily": 0,
-    "lastWork": 1783049389874,
-    "lastCrime": 1783049396925,
-    "lastSlut": 1783049388429
+    "lastDaily": 1794342792268,
+    "lastWork": 1794342675923,
+    "lastCrime": 1794342576538,
+    "lastSlut": 1794342634814
   },
   "261331764641859@lid": {
     "wallet": 1050,
@@ -32,12 +32,12 @@
     "lastSlut": 0
   },
   "44689805819948@lid": {
-    "wallet": 1,
-    "bank": 74425,
-    "lastDaily": 1783045242385,
-    "lastWork": 1783103592011,
-    "lastCrime": 1783103598746,
-    "lastSlut": 1783103594528
+    "wallet": 0,
+    "bank": 148912,
+    "lastDaily": 1794342790729,
+    "lastWork": 1794342960097,
+    "lastCrime": 1794342969834,
+    "lastSlut": 1794342975412
   },
   "127801248227400@lid": {
     "wallet": 508,
@@ -96,10 +96,10 @@
     "lastSlut": 1783022173406
   },
   "78469371277521@lid": {
-    "wallet": 81,
-    "bank": 31109,
-    "lastDaily": 1783039020768,
-    "lastWork": 1783112547465,
+    "wallet": 0,
+    "bank": 32597,
+    "lastDaily": 1794340840189,
+    "lastWork": 1794339566111,
     "lastCrime": 1783104812568,
     "lastSlut": 1783104793572
   },
@@ -112,12 +112,12 @@
     "lastSlut": 1783022980029
   },
   "243636902068249@lid": {
-    "wallet": 202,
-    "bank": 9225,
+    "wallet": 0,
+    "bank": 14916,
     "lastDaily": 1783113403902,
-    "lastWork": 1783221228729,
-    "lastCrime": 1783113372412,
-    "lastSlut": 1783113372340
+    "lastWork": 1794342262004,
+    "lastCrime": 1794342270808,
+    "lastSlut": 1794342273871
   },
   "106747335319656@lid": {
     "wallet": 0,
@@ -128,12 +128,12 @@
     "lastSlut": 1783120276075
   },
   "250482878591199@lid": {
-    "wallet": 1,
-    "bank": 131507,
-    "lastDaily": 1783029837021,
-    "lastWork": 1783103592870,
-    "lastCrime": 1783103602165,
-    "lastSlut": 1783103598493
+    "wallet": 3063,
+    "bank": 133858,
+    "lastDaily": 1794340822634,
+    "lastWork": 1794343153219,
+    "lastCrime": 1794343155558,
+    "lastSlut": 1794343159098
   },
   "3715381645368@lid": {
     "wallet": 681,
@@ -238,5 +238,21 @@
     "lastWork": 1794281245843,
     "lastCrime": 0,
     "lastSlut": 0
+  },
+  "184988771303525@lid": {
+    "wallet": 313,
+    "bank": 0,
+    "lastDaily": 0,
+    "lastWork": 1794340965512,
+    "lastCrime": 0,
+    "lastSlut": 0
+  },
+  "66989276016837@lid": {
+    "wallet": 1087,
+    "bank": 0,
+    "lastDaily": 0,
+    "lastWork": 0,
+    "lastCrime": 1794342283667,
+    "lastSlut": 1794342311257
   }
 }

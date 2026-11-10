@@ -6,7 +6,7 @@ const Menu = (timeFt, Bot, prefixo, sender, groupName, groupMembers) => {
 │ ${timeFt}, @${sender.split('@')[0]} 
 │ ✿ sᴏʏ: ${Bot}
 │ ✿ ᴘʀᴇғɪᴊᴏ: *${prefixo}*
-│ ✿ ᴘᴀɢɪɴᴀ: https://chat.whatsapp.com/B6ayecE3vub14D7vpDW0Ej
+│ ✿ ᴘᴀɴᴇʟ ᴡᴇʙ: https://botsito-qsc6.onrender.com
 ╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯
 
 ╭ ₊˚ ✧ 🎲 *ɢᴀᴄʜᴀ* 🎲 ✧ ˚₊ ╮
@@ -43,6 +43,9 @@ const Menu = (timeFt, Bot, prefixo, sender, groupName, groupMembers) => {
 *➢open / close* ➥ Abrir/cerrar grupo
 *➢iaon / iaoff* ➥ Encender/Apagar IA
 *➢iacow / iarelax / ianormal* ➥ Cambiar modo IA
+*➢serbot* ➥ Convertirte en Sub-Bot (Solo Admins)
+*➢stopbot* ➥ Desconectar tu Sub-Bot
+*➢subbots* ➥ Lista de Sub-Bots activos
 
 ╭ ₊˚ ✧ 🎵 𝐃𝐄𝐒𝐂𝐀𝐑𝐆𝐀𝐒 🎵 ✧ ˚₊ ╮
 *➢play / play2* ➥ Descarga música
