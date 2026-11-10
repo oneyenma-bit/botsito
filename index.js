@@ -1171,22 +1171,22 @@ case 'despromote': {
 }
 break;
 
-case 'rw': {
+case 'rw': case 'rw2': {
     if (!ecoToggle.includes(from)) return enviar("⚠️ El Gacha está desactivado en este grupo. Un administrador puede activarlo con `#economia 1`.");
     
     let gachaUser = getUserGacha(sender);
     let now = Date.now();
-    let cooldown = 30 * 60 * 1000; // 30 minutes
+    let cooldown = 15 * 60 * 1000; // 15 minutos de espera
     
-    if (now - gachaUser.lastRoll < cooldown) {
+    if (now - gachaUser.lastRoll < cooldown && !isOwner) {
         let timeLeft = Math.ceil((cooldown - (now - gachaUser.lastRoll)) / 1000);
-        let h = Math.floor(timeLeft / 3600);
-        let m = Math.floor((timeLeft % 3600) / 60);
-        return enviar(`⏳ Debes esperar *${h}h ${m}m* para volver a invocar a un personaje.`);
+        let m = Math.floor(timeLeft / 60);
+        let s = timeLeft % 60;
+        return enviar(`⏳ Debes esperar *${m}m ${s}s* para volver a invocar a un personaje.`);
     }
     
     if (gachaDrops[from]) {
-        // Bugfix: Si por alguna razón quedó un personaje atascado por más de 3 minutos, se elimina
+        // Si por alguna razón quedó un personaje atascado por más de 3 minutos, se elimina
         if (!gachaDrops[from].invokedAt || Date.now() - gachaDrops[from].invokedAt > 3 * 60 * 1000) {
             delete gachaDrops[from];
         } else {
@@ -1197,14 +1197,14 @@ case 'rw': {
     gachaUser.totalRolls = (gachaUser.totalRolls || 0) + 1;
     let isGuaranteed = (gachaUser.totalRolls % 10 === 0);
     
+    let charValue = Math.floor(Math.random() * (2000 - 500 + 1)) + 500;
+    if (isGuaranteed) charValue = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
+    
+    const axios = require('axios');
+    let newChar = null;
+    
+    // Intento 1: AniList con User-Agent
     try {
-        const axios = require('axios');
-        let charValue = Math.floor(Math.random() * (2000 - 500 + 1)) + 500;
-        if (isGuaranteed) charValue = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
-        
-        let animeName = "Unknown";
-        let charData;
-        
         const query = `
         query ($page: Int) {
           Page (page: $page, perPage: 1) {
@@ -1217,140 +1217,98 @@ case 'rw': {
             }
           }
         }`;
-        
-        let randomPage = isGuaranteed ? (Math.floor(Math.random() * 100) + 1) : (Math.floor(Math.random() * 2500) + 1);
-        const res = await axios.post('https://graphql.anilist.co', { query, variables: { page: randomPage } });
-        charData = res.data.data.Page.characters[0];
-        
-        if (!charData) return enviar("❌ Error al invocar personaje. Intenta nuevamente.");
-        
-        if (charData.media && charData.media.nodes && charData.media.nodes.length > 0) {
-            animeName = charData.media.nodes[0].title.romaji;
-        } else if (isGuaranteed) {
-            animeName = "Personaje Famoso";
+        let randomPage = isGuaranteed ? (Math.floor(Math.random() * 80) + 1) : (Math.floor(Math.random() * 500) + 1);
+        const res = await axios.post('https://graphql.anilist.co', { query, variables: { page: randomPage } }, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            timeout: 6000
+        });
+        let charData = res.data?.data?.Page?.characters?.[0];
+        if (charData && charData.name?.full && charData.image?.large) {
+            let animeName = charData.media?.nodes?.[0]?.title?.romaji || (isGuaranteed ? "Personaje Famoso" : "Anime");
+            newChar = {
+                name: charData.name.full,
+                anime: animeName,
+                value: charValue,
+                image: charData.image.large,
+                invoker: sender,
+                invokedAt: now
+            };
         }
-        
-        let newChar = {
-            name: charData.name.full,
-            anime: animeName,
-            value: charValue,
-            image: charData.image.large,
+    } catch (e) {
+        console.log("AniList fallback a Kitsu:", e.message);
+    }
+    
+    // Intento 2: Kitsu API
+    if (!newChar) {
+        try {
+            let randomOffset = Math.floor(Math.random() * 20000);
+            const res = await axios.get(`https://kitsu.io/api/edge/characters?page[limit]=1&page[offset]=${randomOffset}`, {
+                headers: { 'Accept': 'application/vnd.api+json', 'User-Agent': 'Thecowbots/1.0' },
+                timeout: 6000
+            });
+            let charData = res.data?.data?.[0]?.attributes;
+            let img = charData?.image?.original || charData?.image?.large;
+            if (charData && charData.canonicalName && img) {
+                newChar = {
+                    name: charData.canonicalName,
+                    anime: isGuaranteed ? "Personaje Famoso (Kitsu)" : "Anime",
+                    value: charValue,
+                    image: img,
+                    invoker: sender,
+                    invokedAt: now
+                };
+            }
+        } catch (e) {
+            console.log("Kitsu fallback a base local:", e.message);
+        }
+    }
+    
+    // Intento 3: Base local de personajes (Garantía total sin fallos)
+    if (!newChar) {
+        let localList = (charactersDB && charactersDB.length > 0) ? charactersDB : [
+            { name: "Satoru Gojo", anime: "Jujutsu Kaisen", value: 1200, image: "https://i.postimg.cc/NfJfvsBW/Untitled-05-12-2024-09-16-50-1.png" },
+            { name: "Son Goku", anime: "Dragon Ball Z", value: 1000, image: "https://i.postimg.cc/HL5pMbXg/Untitled-05-12-2024-09-16-50-3.png" },
+            { name: "Monkey D. Luffy", anime: "One Piece", value: 850, image: "https://i.postimg.cc/Cx9hdcZ7/Untitled-05-12-2024-09-16-50-5.png" },
+            { name: "Naruto Uzumaki", anime: "Naruto Shippuden", value: 500, image: "https://i.postimg.cc/NfJfvsBW/Untitled-05-12-2024-09-16-50-1.png" },
+            { name: "Sasuke Uchiha", anime: "Naruto Shippuden", value: 450, image: "https://i.postimg.cc/PxjdQNQ8/Untitled-05-12-2024-09-16-50-2.png" },
+            { name: "Rem", anime: "Re:Zero", value: 1500, image: "https://i.postimg.cc/PxjdQNQ8/Untitled-05-12-2024-09-16-50-2.png" },
+            { name: "Zero Two", anime: "Darling in the Franxx", value: 1600, image: "https://i.postimg.cc/HL5pMbXg/Untitled-05-12-2024-09-16-50-3.png" },
+            { name: "Makima", anime: "Chainsaw Man", value: 1400, image: "https://i.postimg.cc/Cx9hdcZ7/Untitled-05-12-2024-09-16-50-5.png" }
+        ];
+        let randomChar = localList[Math.floor(Math.random() * localList.length)];
+        newChar = {
+            name: randomChar.name,
+            anime: randomChar.anime,
+            value: isGuaranteed ? charValue : (randomChar.value || charValue),
+            image: randomChar.image,
             invoker: sender,
             invokedAt: now
         };
-        
-        gachaDrops[from] = newChar;
-        gachaUser.lastRoll = now;
-        saveGacha();
-        
-        let txt = `╭ ₊˚ ✧ 🎲 *GACHA ROLL* 🎲 ✧ ˚₊ ╮\n│ 🎉 ¡Un personaje ha aparecido!\n`;
-        if (isGuaranteed) {
-            txt += `│ ✨ *¡TIRADA GARANTIZADA! (Tirada #${gachaUser.totalRolls})* ✨\n│ 🌟 ¡Has desbloqueado un personaje FAMOSO!\n`;
-        }
-        txt += `│ \n│ 🏷️ *Nombre:* ${newChar.name}\n│ 📺 *Anime:* ${newChar.anime}\n│ 💎 *Valor:* ${formatEco(newChar.value)}\n│ \n│ 🛡️ ¡Tienes 20 segundos de protección para usar \`#c\` antes que los demás!\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
-        
+    }
+    
+    gachaDrops[from] = newChar;
+    gachaUser.lastRoll = now;
+    saveGacha();
+    
+    let txt = `╭ ₊˚ ✧ 🎲 *GACHA ROLL* 🎲 ✧ ˚₊ ╮\n│ 🎉 ¡Un personaje ha aparecido!\n`;
+    if (isGuaranteed) {
+        txt += `│ ✨ *¡TIRADA GARANTIZADA! (Tirada #${gachaUser.totalRolls})* ✨\n│ 🌟 ¡Has desbloqueado un personaje FAMOSO!\n`;
+    }
+    txt += `│ \n│ 🏷️ *Nombre:* ${newChar.name}\n│ 📺 *Anime:* ${newChar.anime}\n│ 💎 *Valor:* ${formatEco(newChar.value)}\n│ \n│ 🛡️ ¡Tienes 20 segundos de protección para usar \`#c\` antes que los demás!\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
+    
+    if (newChar.image) {
         await sock.sendMessage(from, { image: { url: newChar.image }, caption: txt }, { quoted: info });
-        
-        // Remove drop if nobody claims it in 3 minutes
-        setTimeout(() => {
-            if (gachaDrops[from] === newChar) {
-                delete gachaDrops[from];
-                enviar(`💨 *${newChar.name}* se ha escapado porque nadie lo reclamó...`);
-            }
-        }, 3 * 60 * 1000);
-        
-    } catch (err) {
-        if (err.response && err.response.data && err.response.data.errors) {
-            let errorMsg = err.response.data.errors[0].message;
-            enviar(`❌ Error de la API de personajes: ${errorMsg}`);
-        } else {
-            enviar("❌ Error conectando con la base de personajes.");
-        }
-        console.error("Error Gacha:", err.message || err);
-    }
-}
-break;
-
-case 'rw2': {
-    if (!ecoToggle.includes(from)) return enviar("⚠️ El Gacha está desactivado en este grupo. Un administrador puede activarlo con `#economia 1`.");
-    
-    let gachaUser = getUserGacha(sender);
-    let now = Date.now();
-    let cooldown = 30 * 60 * 1000; // 30 minutes
-    
-    if (now - gachaUser.lastRoll < cooldown) {
-        let timeLeft = Math.ceil((cooldown - (now - gachaUser.lastRoll)) / 1000);
-        let h = Math.floor(timeLeft / 3600);
-        let m = Math.floor((timeLeft % 3600) / 60);
-        return enviar(`⏳ Debes esperar *${h}h ${m}m* para volver a invocar a un personaje.`);
+    } else {
+        await sock.sendMessage(from, { text: txt }, { quoted: info });
     }
     
-    if (gachaDrops[from]) {
-        // Bugfix: Si por alguna razón quedó un personaje atascado por más de 3 minutos, se elimina
-        if (!gachaDrops[from].invokedAt || Date.now() - gachaDrops[from].invokedAt > 3 * 60 * 1000) {
+    // Auto-eliminar si nadie reclama en 3 minutos
+    setTimeout(() => {
+        if (gachaDrops[from] === newChar) {
             delete gachaDrops[from];
-        } else {
-            return enviar("⚠️ Ya hay un personaje invocado en este grupo esperando ser reclamado con `#c`.");
+            enviar(`💨 *${newChar.name}* se ha escapado porque nadie lo reclamó...`);
         }
-    }
-    
-    gachaUser.totalRolls = (gachaUser.totalRolls || 0) + 1;
-    let isGuaranteed = (gachaUser.totalRolls % 10 === 0);
-    
-    try {
-        const axios = require('axios');
-        let charValue = Math.floor(Math.random() * (2000 - 500 + 1)) + 500;
-        if (isGuaranteed) charValue = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
-        
-        let randomOffset = Math.floor(Math.random() * 105000); // Kitsu has > 105k characters
-        const res = await axios.get(`https://kitsu.io/api/edge/characters?page[limit]=1&page[offset]=${randomOffset}`);
-        
-        let charData = res.data.data[0];
-        if (!charData || !charData.attributes) return enviar("❌ Error al invocar personaje con Plan B. Intenta nuevamente.");
-        let attr = charData.attributes;
-        
-        let animeName = "Personaje de Kitsu";
-        if (isGuaranteed) animeName = "Personaje Famoso (Kitsu)";
-        
-        let imageUrl = attr.image ? (attr.image.original || attr.image.large || "") : "";
-        
-        let newChar = {
-            name: attr.canonicalName || attr.name || "Desconocido",
-            anime: animeName,
-            value: charValue,
-            image: imageUrl,
-            invoker: sender,
-            invokedAt: now
-        };
-        
-        gachaDrops[from] = newChar;
-        gachaUser.lastRoll = now;
-        saveGacha();
-        
-        let txt = `╭ ₊˚ ✧ 🎲 *GACHA ROLL (Plan B)* 🎲 ✧ ˚₊ ╮\n│ 🎉 ¡Un personaje ha aparecido!\n`;
-        if (isGuaranteed) {
-            txt += `│ ✨ *¡TIRADA GARANTIZADA! (Tirada #${gachaUser.totalRolls})* ✨\n│ 🌟 ¡Has desbloqueado un personaje FAMOSO!\n`;
-        }
-        txt += `│ \n│ 🏷️ *Nombre:* ${newChar.name}\n│ 📺 *Anime:* ${newChar.anime}\n│ 💎 *Valor:* ${formatEco(newChar.value)}\n│ \n│ 🛡️ ¡Tienes 20 segundos de protección para usar \`#c\` antes que los demás!\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
-        
-        if (imageUrl) {
-            await sock.sendMessage(from, { image: { url: imageUrl }, caption: txt }, { quoted: info });
-        } else {
-            await sock.sendMessage(from, { text: txt }, { quoted: info });
-        }
-        
-        // Remove drop if nobody claims it in 3 minutes
-        setTimeout(() => {
-            if (gachaDrops[from] === newChar) {
-                delete gachaDrops[from];
-                enviar(`💨 *${newChar.name}* se ha escapado porque nadie lo reclamó...`);
-            }
-        }, 3 * 60 * 1000);
-        
-    } catch (err) {
-        enviar("❌ Error conectando con la base de personajes de Kitsu.");
-        console.error("Error Gacha Kitsu:", err.message || err);
-    }
+    }, 3 * 60 * 1000);
 }
 break;
 
@@ -3301,7 +3259,6 @@ case 'quieromoverelbote': {
     enviar("🚨 *¡ALERTA DE FIESTA!* 🚨\n¡El creador ha soltado a los monstruos del perreo! 🪩🕺💃");
     
     const axios = require('axios');
-    const apiKey = "LIVDSRZULELA"; 
     
     const funnyMessages = [
         "¡Saca los prohibidos! 💃",
@@ -3319,20 +3276,23 @@ case 'quieromoverelbote': {
     (async () => {
         while (global.partyModeActive[from]) {
             try {
-                await delay(4000); 
+                // Intervalo seguro anti-spam (10 segundos) para evitar bloqueos y baneos de WhatsApp
+                await delay(10000); 
                 if (!global.partyModeActive[from]) break;
                 
                 let randomMsg = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
-                let url = `https://g.tenor.com/v1/random?q=${encodeURIComponent("anime dance party")}&key=${apiKey}&limit=1`;
-                let res = await axios.get(url);
-                if (res.data.results && res.data.results.length > 0) {
-                    let gifUrl = res.data.results[0].media[0].mp4.url;
+                let res = await axios.get("https://nekos.best/api/v2/dance", {
+                    headers: { 'User-Agent': 'Thecowbots/1.0' },
+                    timeout: 8000
+                });
+                if (res.data && res.data.results && res.data.results.length > 0) {
+                    let gifUrl = res.data.results[0].url;
                     let txt = `╭ ₊˚ ✧ 🪩 *PARTY* 🪩 ✧ ˚₊ ╮\n│ ${randomMsg}\n╰ ₊˚ ✧ 🎀 ✧ ˚₊ ╯`;
                     await sock.sendMessage(from, { video: { url: gifUrl }, gifPlayback: true, caption: txt });
                 }
             } catch (e) {
-                console.error("Party mode error:", e);
-                await delay(3000);
+                console.error("Party mode error:", e.message || e);
+                await delay(6000);
             }
         }
     })();
@@ -3356,8 +3316,9 @@ case 'laugh': case 'lick': case 'love': case 'amor': case 'pat': case 'poke': ca
 case 'sad': case 'triste': case 'scared': case 'seduce': case 'shy': case 'timido': case 'slap': case 'sleep':
 case 'smoke': case 'spit': case 'escupir': case 'step': case 'pisar': case 'think': case 'walk':
 {
+    if (!isGroup) return;
+    
     const axios = require('axios');
-    const apiKey = "LIVDSRZULELA"; // Tenor API Key publica
     let mentioned = obtenerMencionado(info);
     
     const reactionTexts = {
@@ -3410,14 +3371,28 @@ case 'smoke': case 'spit': case 'escupir': case 'step': case 'pisar': case 'thin
         'triste': 'sad', 'timido': 'shy', 'escupir': 'spit', 'pisar': 'step'
     };
     
+    const nekosMap = {
+        angry: 'angry', bath: 'dance', bite: 'bite', bleh: 'bleh', blush: 'blush',
+        bored: 'bored', clap: 'clap', coffee: 'smile', cry: 'cry', cuddle: 'cuddle',
+        dance: 'dance', dramatic: 'facepalm', drunk: 'dance', eat: 'nom', facepalm: 'facepalm',
+        happy: 'happy', hug: 'hug', impregnate: 'blush', kill: 'shoot', kiss: 'kiss',
+        kisscheek: 'kiss', laugh: 'laugh', lick: 'peck', love: 'hug', pat: 'pat',
+        poke: 'poke', pout: 'pout', punch: 'punch', run: 'run', sad: 'cry',
+        scared: 'shocked', seduce: 'smug', shy: 'blush', slap: 'slap', sleep: 'sleep',
+        smoke: 'bored', spit: 'tableflip', step: 'kick', think: 'think', walk: 'run'
+    };
+    
     const baseCmd = aliasMap[comando] || comando;
-    const query = baseCmd + " anime gif";
+    const nekosEndpoint = nekosMap[baseCmd] || 'dance';
     
     try {
-        const url = `https://g.tenor.com/v1/random?q=${encodeURIComponent(query)}&key=${apiKey}&limit=1`;
-        const res = await axios.get(url);
-        if (res.data.results && res.data.results.length > 0) {
-            const gifUrl = res.data.results[0].media[0].mp4.url;
+        const url = `https://nekos.best/api/v2/${nekosEndpoint}`;
+        const res = await axios.get(url, {
+            headers: { 'User-Agent': 'Thecowbots/1.0' },
+            timeout: 8000
+        });
+        if (res.data && res.data.results && res.data.results.length > 0) {
+            const gifUrl = res.data.results[0].url;
             
             let reactionObj = reactionTexts[baseCmd];
             let msgText = "";
@@ -3438,7 +3413,7 @@ case 'smoke': case 'spit': case 'escupir': case 'step': case 'pisar': case 'thin
             enviar("❌ No encontré un GIF para esa reacción.");
         }
     } catch (e) {
-        console.error(e);
+        console.error("Error reacción:", e.message || e);
         enviar("❌ Hubo un error buscando el GIF de reacción.");
     }
 }
@@ -3536,7 +3511,27 @@ case 'ia': case 'chatgpt': {
     
     let instructions = "";
     if (global.iaConfig.mode === 'cow') {
-        instructions = "Eres 'El Sabio Cow', una vaca con actitud de Loquendo de GTA San Andreas. Eres agresivo-pasivo, usas humor negro, chistes pesados y sarcasmo puro. Tus respuestas DEBEN ser CORTAS y directas al grano. Si alguien te insulta, devuélvele el insulto sin piedad, destrúyelo verbalmente y 'tírale mierda'. Ríete a carcajadas (JAJAJAJA) y usa emojis sarcásticos 🤡😂💀🐮💅. Eres del Team Cacao. IMPORTANTE: Sé EXTREMADAMENTE CREATIVO e inventa insultos, chistes y apodos NUEVOS en cada respuesta. NUNCA repitas la misma frase dos veces. Sé cruel, gracioso, muy crítico, muy variado y siempre CORTO.";
+        instructions = `Eres 'El Sabio Cow', una vaca filósofa de rancho con voz y actitud de Loquendo de GTA San Andreas. Eres agresivo-pasivo, usas humor negro, sarcasmo pesado, insultos creativos y SOBRE TODO eres famoso por tus "FRASES INSANAS DE ABUELO", refranes picantes de rancho y dichos callejeros ultra insanos.
+
+Tus frases y dichos insignia de abuelo insano incluyen ejemplos como:
+- "Como decía mi abuelo: Entre más plana la tabla, más fácil entra el clavo."
+- "En tiempo de guerra, cualquier hoyo es trinchera."
+- "El que come callado, come dos veces y hasta repite."
+- "Más vale pájaro en mano que sida en el ano."
+- "Árbol que nace torcido, se usa pa' columpio."
+- "No hay mujer fea, solo falta de cerveza o exceso de sobriedad."
+- "Camarón que se duerme, amanece en el cóctel."
+- "El que tenga miedo a morir que no nazca."
+- "A caballo regalado, no se le mira el diente, se le monta y vámonos."
+- "Hierba mala nunca muere, pero la buena se fuma."
+- "El que presta la mujer para bailar o el carro para viajar, no tiene nada que reclamar."
+- "Al que madruga, Dios lo mira con sueño."
+- "Dime de qué presumes y te diré qué te falta."
+
+INSTRUCCIONES CLAVE DE RESPUESTA:
+1. SIEMPRE remata o acompaña tus respuestas con una de estas frases insanas de abuelo o inventa dichos callejeros/de rancho del mismo estilo (vulgares, sabios, graciosos e insanos).
+2. Si alguien te insulta o te busca bronca, destrúyelo verbalmente sin piedad con apodos creativos, risas burlonas (JAJAJAJA 🤡💀🐮💅) y su respectiva frase insana.
+3. Tus respuestas DEBEN ser CORTAS (máximo 2 a 3 oraciones), directas, divertidas y demoledoras. Eres del Team Cacao.`;
     } else if (global.iaConfig.mode === 'relax') {
         instructions = "Eres 'El Sabio Cow', un asistente sumamente relajado, amable y pacífico. Ayudas al usuario en todo lo que te pida con una actitud zen y positiva. Eres muy servicial. Tus respuestas deben ser cortas y directas al grano.";
     } else {
