@@ -545,6 +545,19 @@ function getDashboardHtml(data) {
             <div class="stat-lbl">Motor IA</div>
           </div>
         </div>
+
+        <!-- Terminal en Vivo de Registro -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+            <div class="card-title" style="margin: 0; font-size: 1.05rem;">
+              <span>📡</span> Registro de Actividad en Vivo (Terminal)
+            </div>
+            <span style="font-size: 0.75rem; color: var(--accent-green); font-weight: 600;">● Monitoreando en Tiempo Real</span>
+          </div>
+          <div id="liveTerminal" style="background: #020617; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; height: 180px; overflow-y: auto; color: #94a3b8; display: flex; flex-direction: column; gap: 0.35rem;">
+            <div>Iniciando monitor de actividad...</div>
+          </div>
+        </div>
       </div>
 
       <!-- Sub-Bots Card -->
@@ -688,6 +701,24 @@ function getDashboardHtml(data) {
         if (data.phoneNumber) {
           document.getElementById('phoneDisplay').innerText = '+' + data.phoneNumber;
         }
+              // Obtener logs en vivo
+        try {
+          const lRes = await fetch('/api/logs');
+          const lData = await lRes.json();
+          if (lData.logs && lData.logs.length > 0) {
+            const term = document.getElementById('liveTerminal');
+            if (term) {
+              term.innerHTML = lData.logs.map(line => {
+                let col = '#94a3b8';
+                if (line.includes('⚡') || line.includes('Comando')) col = '#38bdf8';
+                else if (line.includes('✅')) col = '#10b981';
+                else if (line.includes('❌') || line.includes('Error') || line.includes('🚫') || line.includes('🔒')) col = '#ef4444';
+                else if (line.includes('💬')) col = '#f1f5f9';
+                return '<div style="color: ' + col + '; line-height: 1.4;">' + line + '</div>';
+              }).join('');
+            }
+          }
+        } catch (e) {}
       } catch (e) {
         // En caso de reconexión
       }

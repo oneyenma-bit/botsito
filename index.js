@@ -28,6 +28,21 @@ app.get('/', (req, res) => {
 });
 
 // API Estado
+// Logs en memoria
+global.botLogs = [];
+global.addLog = function(msg) {
+  const time = new Date().toLocaleTimeString('es-HN', { timeZone: 'America/Tegucigalpa' });
+  const entry = `[${time}] ${msg}`;
+  console.log(entry);
+  global.botLogs.unshift(entry);
+  if (global.botLogs.length > 80) global.botLogs.pop();
+};
+
+// API Logs
+app.get('/api/logs', (req, res) => {
+  res.json({ logs: global.botLogs || [] });
+});
+
 app.get('/api/status', (req, res) => {
   res.json({
     status: global.botStatus.state,
@@ -601,18 +616,40 @@ async function restaurarSubBots(mainSock) {
 async function procesarMensaje(sock, m) {
 
  try {
- const info = m.messages[0]
- if (!info.message) return 
- if (info.key && info.key.remoteJid == "status@broadcast") return
- const altpdf = Object.keys(info.message)
- const type = altpdf[0] == "senderKeyDistributionMessage" ? altpdf[1] == "messageContextInfo" ? altpdf[2] : altpdf[1] : altpdf[0]
-const content = JSON.stringify(info.message)
-const from = info.key.remoteJid
- var body = (type === 'conversation') ? info.message.conversation : (type == 'imageMessage') ? info.message.imageMessage.caption : (type == 'videoMessage') ? info.message.videoMessage.caption : (type == 'extendedTextMessage') ? info.message.extendedTextMessage.text : (type == 'buttonsResponseMessage') ? info.message.buttonsResponseMessage.selectedButtonId : (type == 'listResponseMessage') ? info.message.listResponseMessage.singleSelectReply.selectedRowId : (type == 'templateButtonReplyMessage') ? info.message.templateButtonReplyMessage.selectedId : ''
+ const info = m.messages[0];
+ if (!info || !info.message) return;
+ if (info.key && info.key.remoteJid == "status@broadcast") return;
 
-const budy = (type === 'conversation') ? info.message.conversation : (type === 'extendedTextMessage') ? info.message.extendedTextMessage.text : ''
+ // 1️⃣ Desempaquetar mensaje eliminando wrappers de WhatsApp (ephemeral, viewOnce, etc.)
+ let msg = info.message;
+ if (msg?.ephemeralMessage) msg = msg.ephemeralMessage.message;
+ if (msg?.viewOnceMessage) msg = msg.viewOnceMessage.message;
+ if (msg?.viewOnceMessageV2) msg = msg.viewOnceMessageV2.message;
+ if (msg?.viewOnceMessageV2Extension) msg = msg.viewOnceMessageV2Extension.message;
+ if (msg?.documentWithCaptionMessage) msg = msg.documentWithCaptionMessage.message;
+ if (!msg) return;
 
-var pes = (type === 'conversation' && info.message.conversation) ? info.message.conversation : (type == 'imageMessage') && info.message.imageMessage.caption ? info.message.imageMessage.caption : (type == 'videoMessage') && info.message.videoMessage.caption ? info.message.videoMessage.caption : (type == 'extendedTextMessage') && info.message.extendedTextMessage.text ? info.message.extendedTextMessage.text : ''
+ // 2️⃣ Detección limpia de tipo ignorando metadatos
+ const validKeys = Object.keys(msg).filter(k => 
+   k !== 'messageContextInfo' && 
+   k !== 'senderKeyDistributionMessage' &&
+   k !== 'botInvokeMessage'
+ );
+ const type = validKeys[0] || Object.keys(msg)[0] || '';
+ const content = JSON.stringify(msg);
+ const from = info.key.remoteJid;
+
+ var body = (type === 'conversation') ? (msg.conversation || '') :
+            (type === 'imageMessage') ? (msg.imageMessage?.caption || '') :
+            (type === 'videoMessage') ? (msg.videoMessage?.caption || '') :
+            (type === 'extendedTextMessage') ? (msg.extendedTextMessage?.text || '') :
+            (type === 'buttonsResponseMessage') ? (msg.buttonsResponseMessage?.selectedButtonId || '') :
+            (type === 'listResponseMessage') ? (msg.listResponseMessage?.singleSelectReply?.selectedRowId || '') :
+            (type === 'templateButtonReplyMessage') ? (msg.templateButtonReplyMessage?.selectedId || '') :
+            (type === 'interactiveResponseMessage') ? (JSON.parse(msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || '{}')?.id || '') : '';
+
+ const budy = (type === 'conversation') ? (msg.conversation || '') : (type === 'extendedTextMessage') ? (msg.extendedTextMessage?.text || '') : body;
+ var pes = body;
 
 const numerodono = [
   `${owner}`,
@@ -651,19 +688,20 @@ const groupMembers = groupMetadata?.participants || [];
 const nome = info.pushName ? info.pushName : ''
 const groupAdmins = groupMembers.filter(p => p.admin);
 const Sadm = isGroup ? getGroupAdmins(groupAdmins) :''
-const isCmd = body.startsWith(prefixo)
-const messagesC = pes.slice(0).trim().split(/ +/).shift().toLowerCase()
-const args = isCmd
-  ? body.slice(prefixo.length).trim().split(/ +/).slice(1)
-  : [];
-const q = args.join(' ')
-const text = args.join(' ')
+// Multi-prefijo universal (#, ., !, /)
+const availablePrefixes = [prefixo, '#', '.', '!', '/'].filter(Boolean);
+const usedPrefix = availablePrefixes.find(p => body.startsWith(p));
+const isCmd = Boolean(usedPrefix);
+const cleanBody = isCmd ? body.slice(usedPrefix.length).trim() : '';
+const args = isCmd ? cleanBody.split(/ +/).slice(1) : [];
+const q = args.join(' ');
+const text = args.join(' ');
+const messagesC = pes.slice(0).trim().split(/ +/).shift().toLowerCase();
 
-  // MULTIPREFIJO 
 const removeAccents = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const comando = isCmd
   ? removeAccents(
-      body.slice(prefixo.length).trim().split(/ +/)[0].toLowerCase()
+      cleanBody.split(/ +/)[0].toLowerCase()
     )
   : "";
 const mentions = (teks, memberr, id) => {
@@ -675,7 +713,8 @@ const pushname = info.pushName ? info.pushName : ''
 const isBot = info.key.fromMe ? true : false
 const senderNumber = sender.split("@")[0]
 const BotNumber = sock.user.id.split(':')[0]+'@s.whatsapp.net'
-const isOwner =  numerodono.some(don => don.split('@')[0] === sender.split('@')[0].split(':')[0])
+const cleanSender = sender ? sender.split(':')[0].replace(/@.*$/, '') : '';
+const isOwner = isBot || numerodono.some(don => don.includes(cleanSender) || sender.includes(don.split('@')[0]));
 
 
 const isGroupAdmins = isOwner || groupAdmins.some(admin => admin.id?.split('@')[0] === sender.split('@')[0].split(':')[0]);
@@ -712,7 +751,13 @@ const hora = new Date().toLocaleTimeString('PE', options)
   const iswelkom = isGroup ? welkom.includes(from) : false
 const isBanGp = isGroup ? bngp.includes(from) : false
 const isAntipv = Antipv.includes('activo')
-const isReg = checkOfReg(sender)
+let isReg = checkOfReg(sender);
+if (!isReg && sender) {
+  try {
+    AddReg(sender, nome || pushname || 'Usuario');
+    isReg = true;
+  } catch(e) {}
+}
  const isAntiLink = isGroup ? antilink.includes(from) : false 
  const isModoEstricto = isGroup ? modoEstrictoDB.includes(from) : false
 const coins = MoneyOfSender(sender)
@@ -753,9 +798,17 @@ function DLT_FL(file) {
         }
     }
     
- const enviar = (texto) => {
- sock.sendMessage(from,{ text : texto }, {quoted : info})
- }
+ const enviar = async (texto) => {
+   try {
+     return await sock.sendMessage(from, { text: texto }, { quoted: info });
+   } catch (err1) {
+     try {
+       return await sock.sendMessage(from, { text: texto });
+     } catch (err2) {
+       console.error('Error enviando mensaje:', err2.message);
+     }
+   }
+ };
  
  //rangos
 const rangos = JSON.parse(fs.readFileSync('./settings/rangos.json'))
@@ -964,13 +1017,30 @@ return
 if(isAntipv && !isGroup && !isOwner){
 sock.updateBlockStatus(sender, 'block')
 }
-if (!isCmd) return;
+if (!isCmd) {
+  if (body && body.length > 0 && typeof global.addLog === 'function') {
+    global.addLog(`💬 Chat [${isGroup ? 'Grupo' : 'PV'} de ${pushname || senderNumber}]: "${body.slice(0, 35)}"`);
+  }
+  return;
+}
+
+if (typeof global.addLog === 'function') {
+  global.addLog(`⚡ Comando: "${comando}" (prefijo: "${usedPrefix}") por ${pushname || senderNumber}`);
+}
 
 // INICIO DE COMANDOS
-//solo funciona si está activado el bot
-// Si el grupo está en modo admin y el usuario no es admin ni owner, se bloquea su acceso
-if (isModoAdmin && !isGroupAdmins && !isOwner) return;
-if (!botActivo && !isOwner) return
+if (isBanGp) {
+  if (typeof global.addLog === 'function') global.addLog(`🚫 Grupo baneado. Ignorando.`);
+  return;
+}
+if (isModoAdmin && !isGroupAdmins && !isOwner) {
+  if (typeof global.addLog === 'function') global.addLog(`🔒 Modo admin activo. Ignorando.`);
+  return;
+}
+if (!botActivo && !isOwner) {
+  if (typeof global.addLog === 'function') global.addLog(`💤 Bot apagado globalmente.`);
+  return;
+}
 
 switch(comando) {
 
@@ -1229,7 +1299,6 @@ break;
 //información 
 
 case 'infobot': case 'ping': {
-if (!isGroup) return
 let timestamp = speed()
 let latensi = speed() - timestamp
 uptime = process.uptime()
