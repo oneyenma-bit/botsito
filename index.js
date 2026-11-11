@@ -1153,19 +1153,19 @@ break
 
   
   
-  case 'menu':
+case 'menu':
 case 'help': {
-    if (!isGroup) return;
-    if (!isReg) return enviar(respuesta.registro);
-
     const Mnu = Menu(timeFt, Bot, prefixo, sender, groupName, groupMembers);
 
-    // Enviar imagen del menú completa
-    await sock.sendMessage(from, {
-        image: { url: JpgBot },
-        caption: Mnu,
-        mentions: [sender]
-    }, { quoted: info });
+    try {
+        await sock.sendMessage(from, {
+            image: { url: JpgBot },
+            caption: Mnu,
+            mentions: [sender]
+        }, { quoted: info });
+    } catch (e) {
+        await enviar(Mnu);
+    }
 }
 break;
 
@@ -3547,8 +3547,6 @@ case 'laugh': case 'lick': case 'love': case 'amor': case 'pat': case 'poke': ca
 case 'sad': case 'triste': case 'scared': case 'seduce': case 'shy': case 'timido': case 'slap': case 'sleep':
 case 'smoke': case 'spit': case 'escupir': case 'step': case 'pisar': case 'think': case 'walk':
 {
-    if (!isGroup) return;
-    
     const axios = require('axios');
     let mentioned = obtenerMencionado(info);
     
